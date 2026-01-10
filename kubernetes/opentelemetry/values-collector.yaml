@@ -1,0 +1,348 @@
+# OpenTelemetry Collector - Open Source Observability Stack
+# Deploys ONLY the OpenTelemetry Collector (not the demo app)
+# This collector receives telemetry from the Microservices Demo and exports to:
+# - Jaeger (distributed tracing)
+# - Prometheus (metrics)
+# - Open-source observability backends
+
+# Deployment mode
+mode: deployment
+
+# Service account
+serviceAccount:
+  create: true
+  name: otel-collector-sa
+
+# Collector replicas for high availability
+replicaCount: 2
+
+# Resource limits - optimized for cost
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+# OpenTelemetry Collector Configuration
+config:
+  # Receivers - how telemetry data enters the collector
+  receivers:
+    # OTLP receiver for traces, metrics, and logs
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+          cors:
+            allowed_origins:
+              - "*"
+
+    # Prometheus receiver for scraping metrics
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: 'otel-collector'
+            scrape_interval: 30s
+            static_configs:
+              - targets: ['localhost:8888']
+
+  # Processors - transform and enrich telemetry data
+  processors:
+    # Batch processor - batches telemetry for efficiency
+    batch:
+      timeout: 10s
+      send_batch_size: 1024
+      send_batch_max_size: 2048
+
+    # Memory limiter - prevents OOM
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 75
+      spike_limit_percentage: 25
+
+    # Resource detection - adds Kubernetes metadata
+    resourcedetection:
+      detectors: [env, system]
+      timeout: 5s
+      override: false
+
+    # Kubernetes attributes processor
+    k8sattributes:
+      auth_type: "serviceAccount"
+      passthrough: false
+      extract:
+        metadata:
+          - k8s.namespace.name
+          - k8s.deployment.name
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.node.name
+        labels:
+          - tag_name: app
+            key: app
+            from: pod
+      pod_association:
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.ip
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.uid
+        - sources:
+          - from: connection
+
+    # Attributes processor - add custom attributes
+    attributes:
+      actions:
+        - key: deployment.environment
+          value: demo
+          action: insert
+        - key: service.namespace
+          value: microservices-demo
+          action: insert
+
+    # Sampling processor - for production use, reduce trace volume
+    # 100% sampling for demo/learning (change to 10.0 for production)
+    probabilistic_sampler:
+      sampling_percentage: 100.0
+
+  # Exporters - where telemetry data goes
+  exporters:
+    # Jaeger - Distributed Tracing Backend
+    jaeger:
+      endpoint: jaeger-collector.observability.svc.cluster.local:14250
+      tls:
+        insecure: true
+      sending_queue:
+        enabled: true
+        num_consumers: 10
+        queue_size: 1000
+      retry_on_failure:
+        enabled: true
+        initial_interval: 5s
+        max_interval: 30s
+        max_elapsed_time: 300s
+
+    # OTLP to Jaeger (alternative using OTLP protocol)
+    otlp/jaeger:
+      endpoint: jaeger-collector.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+      sending_queue:
+        enabled: true
+        num_consumers: 10
+        queue_size: 1000
+
+    # Prometheus - Metrics Exporter
+    # Exposes metrics in Prometheus format for scraping
+    prometheus:
+      endpoint: "0.0.0.0:8889"
+      namespace: "microservices"
+      const_labels:
+        environment: demo
+        cluster: gke
+      send_timestamps: true
+      metric_expiration: 5m
+      resource_to_telemetry_conversion:
+        enabled: true
+
+    # Logging exporter - for debugging (can disable in production)
+    logging:
+      loglevel: info
+      sampling_initial: 5
+      sampling_thereafter: 200
+
+  # Extensions - additional collector capabilities
+  extensions:
+    # Health check endpoint
+    health_check:
+      endpoint: 0.0.0.0:13133
+
+    # pprof for performance profiling
+    pprof:
+      endpoint: 0.0.0.0:1777
+
+    # zpages for diagnostics
+    zpages:
+      endpoint: 0.0.0.0:55679
+
+  # Service pipelines - connect receivers, processors, and exporters
+  service:
+    extensions: [health_check, pprof, zpages]
+
+    pipelines:
+      # Traces pipeline - distributed tracing to Jaeger
+      traces:
+        receivers: [otlp]
+        processors:
+          - memory_limiter
+          - resourcedetection
+          - k8sattributes
+          - attributes
+          - probabilistic_sampler
+          - batch
+        exporters: [jaeger, logging]
+
+      # Metrics pipeline - application metrics to Prometheus
+      metrics:
+        receivers: [otlp, prometheus]
+        processors:
+          - memory_limiter
+          - resourcedetection
+          - k8sattributes
+          - attributes
+          - batch
+        exporters: [prometheus]
+
+      # Logs pipeline - application logs (currently logging only)
+      # Note: For production, consider adding Loki exporter
+      logs:
+        receivers: [otlp]
+        processors:
+          - memory_limiter
+          - resourcedetection
+          - k8sattributes
+          - attributes
+          - batch
+        exporters: [logging]
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    # OTLP gRPC receiver
+    otlp-grpc:
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    # OTLP HTTP receiver
+    otlp-http:
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    # Prometheus metrics endpoint
+    metrics:
+      port: 8888
+      targetPort: 8888
+      protocol: TCP
+    # Prometheus exporter
+    prometheus:
+      port: 8889
+      targetPort: 8889
+      protocol: TCP
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8888"
+  prometheus.io/path: "/metrics"
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Horizontal Pod Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service Monitor for Prometheus Operator (if using Managed Prometheus)
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # Allow ingress from microservices-demo namespace
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: microservices-demo
+        - namespaceSelector:
+            matchLabels:
+              name: opentelemetry
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+
+  # Allow egress to GCP APIs
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443  # HTTPS for GCP APIs
+        - protocol: TCP
+          port: 53   # DNS
+        - protocol: UDP
+          port: 53   # DNS
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /
+    port: 13133
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 13133
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Environment variables
+env:
+  - name: GOGC
+    value: "80"  # More aggressive garbage collection
+  - name: GOMEMLIMIT
+    value: "768MiB"  # Memory limit for Go runtime
+
+# Affinity rules for better distribution
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - opentelemetry-collector
+          topologyKey: kubernetes.io/hostname

@@ -1,0 +1,213 @@
+# GCP Observability Demo - Terraform Variables Example
+#
+# INSTRUCTIONS:
+# 1. Copy this file to terraform.tfvars
+# 2. Replace placeholder values with your actual configuration
+# 3. Review and adjust optional settings as needed
+# 4. DO NOT commit terraform.tfvars to version control (it's in .gitignore)
+
+# =============================================================================
+# REQUIRED VARIABLES - Must be configured
+# =============================================================================
+
+# Your GCP project ID (6-30 characters, lowercase, start with letter)
+project_id = "my-observ-demo-project"
+
+# GCP billing account ID (format: XXXXXX-XXXXXX-XXXXXX)
+# Find at: https://console.cloud.google.com/billing
+billing_account = "012345-6789AB-CDEF01"
+
+# GCP region for resources
+region = "us-central1"
+
+# Environment name (dev, staging, prod, demo)
+environment = "demo"
+
+# =============================================================================
+# STATE BUCKET - Configure after first run
+# =============================================================================
+
+# Leave empty for initial deployment (uses local state)
+# After first apply, set to: PROJECT_ID-terraform-state
+state_bucket_name = ""
+
+# =============================================================================
+# NOTIFICATION CONFIGURATION
+# =============================================================================
+
+# Email for deployment and alert notifications
+notification_email = "your-email@example.com"
+
+# Optional: Slack webhook URL for notifications
+# notification_slack = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# Optional: PagerDuty integration key
+# notification_pagerduty = "your-pagerduty-key"
+
+# =============================================================================
+# BUDGET CONFIGURATION
+# =============================================================================
+
+# Monthly budget in your currency (default: USD)
+budget_amount = 100
+
+# Currency code (USD, EUR, GBP, CAD, AUD, JPY, INR)
+currency_code = "USD"
+
+# Budget alert thresholds (default: 50%, 75%, 90%, 100% current, 100% forecast)
+# Uncomment to customize:
+# budget_threshold_rules = [
+#   { threshold_percent = 0.5, spend_basis = "CURRENT_SPEND" },
+#   { threshold_percent = 0.75, spend_basis = "CURRENT_SPEND" },
+#   { threshold_percent = 0.9, spend_basis = "CURRENT_SPEND" },
+#   { threshold_percent = 1.0, spend_basis = "CURRENT_SPEND" }
+# ]
+
+# =============================================================================
+# NETWORK CONFIGURATION (Optional - defaults are production-ready)
+# =============================================================================
+
+# Subnet CIDR ranges (adjust if conflicts with existing networks)
+# subnet_cidr    = "10.0.0.0/20"    # 4,091 node IPs
+# pods_cidr      = "10.4.0.0/14"    # 262,144 pod IPs
+# services_cidr  = "10.8.0.0/20"    # 4,091 service IPs
+
+# Enable VPC flow logs (increases cost slightly)
+# enable_flow_logs = false
+
+# Create static IP for load balancer
+# create_static_ip = true
+
+# Enable SSH access for debugging (not recommended for production)
+# enable_ssh_access = false
+
+# =============================================================================
+# GKE CLUSTER CONFIGURATION (Optional)
+# =============================================================================
+
+# Cluster name (defaults to PROJECT_ID-gke)
+# cluster_name = "my-observ-cluster"
+
+# Regional cluster (true) or zonal cluster (false)
+# Regional provides HA but costs more
+regional_cluster = true
+
+# Zone for zonal cluster (if regional_cluster = false)
+# zone = "us-central1-a"
+
+# Private cluster configuration
+enable_private_nodes    = true
+enable_private_endpoint = false  # Set to true if using Cloud VPN/Interconnect
+
+# Master authorized networks (restrict API access)
+# Uncomment to allow only specific IPs:
+# master_authorized_networks = [
+#   {
+#     cidr_block   = "203.0.113.0/24"
+#     display_name = "Office Network"
+#   }
+# ]
+
+# Release channel (RAPID, REGULAR, STABLE)
+release_channel = "REGULAR"
+
+# Optional features
+# enable_binary_authorization      = false  # Enhanced container security
+# enable_vertical_pod_autoscaling  = true   # VPA for cost optimization
+# enable_managed_prometheus        = true   # GKE-managed Prometheus
+# enable_security_posture          = true   # Security scanning
+# deletion_protection              = false  # Prevent accidental deletion
+
+# =============================================================================
+# IAP (IDENTITY-AWARE PROXY) CONFIGURATION (Optional)
+# =============================================================================
+
+# Enable IAP for secure, VPN-free access
+enable_iap = true
+
+# Users authorized to access via IAP (format: user:email@example.com)
+iap_users = [
+  "user:admin@example.com",
+  "user:developer@example.com"
+]
+
+# Create new OAuth consent screen
+create_iap_brand = true
+
+# Brand name for OAuth consent screen
+iap_brand_name = "Observability Demo"
+
+# Create OAuth client
+create_oauth_client = true
+
+# Create static IP for IAP load balancer
+create_iap_static_ip = true
+
+# SSL certificate for custom domain (optional)
+# Requires domain ownership verification
+# create_ssl_certificate = true
+# ssl_domains = ["observ.example.com"]
+
+# Cloud Armor security policy
+create_security_policy = true
+enable_rate_limiting   = true
+rate_limit_threshold   = 1000  # requests per minute
+
+# Geo-blocking (optional)
+# allowed_countries = ["US", "CA", "GB"]
+# blocked_countries = ["CN", "RU"]
+
+# =============================================================================
+# MONITORING & ALERTING (Optional - defaults enable all alerts)
+# =============================================================================
+
+# Alert policies (all enabled by default)
+# enable_cluster_health_alerts = true
+# enable_pod_alerts            = true
+# enable_error_rate_alerts     = true
+# enable_resource_alerts       = true
+# enable_deployment_alerts     = true
+
+# Alert thresholds
+# cpu_threshold_percent    = 80   # Alert when CPU > 80%
+# memory_threshold_percent = 85   # Alert when memory > 85%
+# error_rate_threshold     = 5    # Alert when errors > 5/sec
+
+# Dashboards
+# create_overview_dashboard = true
+# create_gke_dashboard      = true
+
+# Uptime checks (optional)
+# create_uptime_checks = true
+# uptime_check_urls = [
+#   "https://your-service.example.com"
+# ]
+
+# =============================================================================
+# LABELS (Optional - for resource organization)
+# =============================================================================
+
+# labels = {
+#   team        = "platform"
+#   cost-center = "engineering"
+#   owner       = "sre-team"
+# }
+
+# =============================================================================
+# ADVANCED CONFIGURATION (Usually not needed)
+# =============================================================================
+
+# Custom DNS zone for cluster
+# create_dns_zone = false
+# dns_domain      = "observ-demo.internal"
+
+# Generate kubeconfig file
+# generate_kubeconfig = false
+# kubeconfig_path     = "~/.kube/observ-demo-config"
+
+# Budget advanced features
+# create_budget_subscription      = false  # Pub/Sub for programmatic handling
+# create_budget_alert_function    = false  # Cloud Function for custom alerts
+# create_budget_monitoring_alert  = true   # Cloud Monitoring integration
+# budget_alert_threshold          = 90     # Alert threshold percentage
+# create_cost_metric              = false  # Custom log-based cost metric

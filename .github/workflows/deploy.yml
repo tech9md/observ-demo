@@ -1,0 +1,430 @@
+# GCP Observability Demo - Full Deployment Pipeline
+# This workflow provisions infrastructure and deploys all applications
+
+name: Deploy Observability Demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - destroy
+          - stop
+          - start
+      environment:
+        description: 'Environment name'
+        required: true
+        default: 'demo'
+        type: string
+      region:
+        description: 'GCP Region'
+        required: true
+        default: 'us-central1'
+        type: choice
+        options:
+          - us-central1
+          - us-east1
+          - us-west1
+          - europe-west1
+          - asia-southeast1
+      auto_approve:
+        description: 'Auto-approve Terraform changes'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TF_VERSION: '1.6.0'
+  KUBECTL_VERSION: 'v1.28.0'
+  HELM_VERSION: 'v3.13.0'
+  GKE_CLUSTER_NAME: 'observ-demo-cluster'
+
+jobs:
+  # ============================================
+  # DEPLOY: Full infrastructure + applications
+  # ============================================
+  deploy:
+    if: ${{ github.event.inputs.action == 'deploy' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      # ---- Terraform Infrastructure ----
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.GCP_PROJECT_ID }}-tfstate" \
+            -backend-config="prefix=observ-demo/${{ github.event.inputs.environment }}"
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="region=${{ github.event.inputs.region }}" \
+            -var="environment=${{ github.event.inputs.environment }}" \
+            -var="billing_account=${{ secrets.GCP_BILLING_ACCOUNT }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          if [ "${{ github.event.inputs.auto_approve }}" == "true" ]; then
+            terraform apply -auto-approve tfplan
+          else
+            terraform apply tfplan
+          fi
+
+      # ---- Configure kubectl ----
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+            --region ${{ github.event.inputs.region }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Verify Cluster Connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      # ---- Deploy Observability Stack ----
+      - name: Create Observability Namespace
+        run: |
+          kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace observability name=observability --overwrite
+
+      - name: Deploy Jaeger
+        working-directory: kubernetes/observability
+        run: |
+          kubectl apply -f jaeger-all-in-one.yaml
+          echo "Waiting for Jaeger to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --selector=app=jaeger \
+            --namespace=observability \
+            --timeout=300s
+
+      - name: Add Helm Repositories
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo update
+
+      - name: Deploy Prometheus Stack
+        working-directory: kubernetes/observability
+        run: |
+          helm upgrade --install prometheus \
+            prometheus-community/kube-prometheus-stack \
+            --namespace observability \
+            --values prometheus-values.yaml \
+            --wait \
+            --timeout 10m
+
+      - name: Deploy Grafana
+        working-directory: kubernetes/observability
+        run: |
+          kubectl apply -f grafana.yaml
+          echo "Waiting for Grafana to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --selector=app=grafana \
+            --namespace=observability \
+            --timeout=300s
+
+      - name: Create Dashboard ConfigMaps
+        working-directory: kubernetes/observability
+        run: |
+          kubectl create configmap grafana-dashboards-sre \
+            --from-file=dashboards/ \
+            --namespace=observability \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # ---- Deploy OpenTelemetry Collector ----
+      - name: Create OpenTelemetry Namespace
+        run: |
+          kubectl create namespace opentelemetry --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace opentelemetry name=opentelemetry --overwrite
+
+      - name: Deploy OpenTelemetry Collector
+        working-directory: kubernetes/opentelemetry
+        run: |
+          helm upgrade --install otel-collector \
+            open-telemetry/opentelemetry-collector \
+            --namespace opentelemetry \
+            --values values-collector.yaml \
+            --wait \
+            --timeout 5m
+
+      # ---- Deploy Microservices Demo ----
+      - name: Create Microservices Namespace
+        run: |
+          kubectl create namespace microservices-demo --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace microservices-demo name=microservices-demo --overwrite
+
+      - name: Deploy Microservices Demo
+        working-directory: kubernetes/microservices-demo
+        run: |
+          helm repo add google-cloud-demo https://googlecloudplatform.github.io/microservices-demo
+          helm upgrade --install microservices-demo \
+            google-cloud-demo/microservices-demo \
+            --namespace microservices-demo \
+            --values values-gcp.yaml \
+            --wait \
+            --timeout 10m
+
+      # ---- Deployment Summary ----
+      - name: Deployment Summary
+        run: |
+          echo "============================================"
+          echo "DEPLOYMENT COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "Cluster: ${{ env.GKE_CLUSTER_NAME }}"
+          echo "Region: ${{ github.event.inputs.region }}"
+          echo "Project: ${{ secrets.GCP_PROJECT_ID }}"
+          echo ""
+          echo "Pods Status:"
+          kubectl get pods -A | grep -E "observability|opentelemetry|microservices"
+          echo ""
+          echo "Services:"
+          kubectl get svc -n observability
+          echo ""
+          echo "============================================"
+          echo "ACCESS INSTRUCTIONS"
+          echo "============================================"
+          echo ""
+          echo "Run these commands locally to access the stack:"
+          echo ""
+          echo "# Configure kubectl:"
+          echo "gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \\"
+          echo "  --region ${{ github.event.inputs.region }} \\"
+          echo "  --project ${{ secrets.GCP_PROJECT_ID }}"
+          echo ""
+          echo "# Jaeger (Traces):"
+          echo "kubectl port-forward -n observability svc/jaeger-query 16686:16686"
+          echo "# Access: http://localhost:16686"
+          echo ""
+          echo "# Prometheus (Metrics):"
+          echo "kubectl port-forward -n observability svc/prometheus-server 9090:9090"
+          echo "# Access: http://localhost:9090"
+          echo ""
+          echo "# Grafana (Dashboards):"
+          echo "kubectl port-forward -n observability svc/grafana 3000:3000"
+          echo "# Access: http://localhost:3000 (admin/admin123)"
+          echo ""
+
+  # ============================================
+  # STOP: Scale all deployments to zero
+  # ============================================
+  stop:
+    if: ${{ github.event.inputs.action == 'stop' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+            --region ${{ github.event.inputs.region }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Scale Down All Deployments
+        run: |
+          echo "Scaling down observability namespace..."
+          kubectl scale deployment -n observability --replicas=0 --all || true
+          kubectl scale statefulset -n observability --replicas=0 --all || true
+
+          echo "Scaling down opentelemetry namespace..."
+          kubectl scale deployment -n opentelemetry --replicas=0 --all || true
+
+          echo "Scaling down microservices-demo namespace..."
+          kubectl scale deployment -n microservices-demo --replicas=0 --all || true
+
+          echo ""
+          echo "All deployments scaled to zero. Run 'start' action to resume."
+          echo "Note: GKE Autopilot will scale down nodes automatically."
+
+      - name: Show Status
+        run: |
+          echo "Current pod status (should be empty or terminating):"
+          kubectl get pods -A | grep -E "observability|opentelemetry|microservices" || echo "No pods running"
+
+  # ============================================
+  # START: Scale deployments back up
+  # ============================================
+  start:
+    if: ${{ github.event.inputs.action == 'start' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+            --region ${{ github.event.inputs.region }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Scale Up All Deployments
+        run: |
+          echo "Scaling up observability namespace..."
+          kubectl scale deployment -n observability --replicas=1 --all || true
+          kubectl scale statefulset -n observability --replicas=1 --all || true
+
+          echo "Scaling up opentelemetry namespace..."
+          kubectl scale deployment -n opentelemetry --replicas=2 --all || true
+
+          echo "Scaling up microservices-demo namespace..."
+          kubectl scale deployment -n microservices-demo --replicas=1 --all || true
+
+          echo ""
+          echo "All deployments scaled up. Waiting for pods to be ready..."
+
+      - name: Wait for Pods
+        run: |
+          echo "Waiting for pods to be ready (this may take a few minutes)..."
+          kubectl wait --for=condition=ready pod --all -n observability --timeout=300s || true
+          kubectl wait --for=condition=ready pod --all -n opentelemetry --timeout=300s || true
+          kubectl wait --for=condition=ready pod --all -n microservices-demo --timeout=300s || true
+
+      - name: Show Status
+        run: |
+          echo "Current pod status:"
+          kubectl get pods -A | grep -E "observability|opentelemetry|microservices"
+
+  # ============================================
+  # DESTROY: Remove all resources
+  # ============================================
+  destroy:
+    if: ${{ github.event.inputs.action == 'destroy' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Get GKE Credentials
+        continue-on-error: true
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+            --region ${{ github.event.inputs.region }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Delete Kubernetes Resources
+        continue-on-error: true
+        run: |
+          echo "Deleting Kubernetes namespaces..."
+          kubectl delete namespace microservices-demo --ignore-not-found=true --timeout=120s || true
+          kubectl delete namespace opentelemetry --ignore-not-found=true --timeout=120s || true
+          kubectl delete namespace observability --ignore-not-found=true --timeout=120s || true
+          echo "Kubernetes resources deleted."
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.GCP_PROJECT_ID }}-tfstate" \
+            -backend-config="prefix=observ-demo/${{ github.event.inputs.environment }}"
+
+      - name: Terraform Destroy
+        working-directory: terraform
+        run: |
+          terraform destroy \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="region=${{ github.event.inputs.region }}" \
+            -var="environment=${{ github.event.inputs.environment }}" \
+            -var="billing_account=${{ secrets.GCP_BILLING_ACCOUNT }}" \
+            -auto-approve
+
+      - name: Cleanup Summary
+        run: |
+          echo "============================================"
+          echo "DESTROY COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "All resources have been destroyed."
+          echo "Terraform state has been updated."
+          echo ""
+          echo "To redeploy, run the 'deploy' action."

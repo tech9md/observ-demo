@@ -1,0 +1,303 @@
+# Prometheus Stack Configuration
+# Includes: Prometheus, Alertmanager, Grafana, and exporters
+# Using kube-prometheus-stack Helm chart
+
+# Global configuration
+global:
+  rbac:
+    create: true
+
+# Prometheus Operator
+prometheusOperator:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Prometheus Server
+prometheus:
+  enabled: true
+
+  serviceAccount:
+    create: true
+    name: prometheus
+
+  # Prometheus Server Configuration
+  prometheusSpec:
+    # Retention
+    retention: 7d
+    retentionSize: "10GB"
+
+    # Resource limits
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+
+    # Storage
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+    # Service Monitor Selector - discover all service monitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+
+    # Pod Monitor Selector
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+
+    # Scrape interval
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # Additional scrape configs for OpenTelemetry Collector
+    additionalScrapeConfigs:
+      - job_name: 'otel-collector'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - opentelemetry
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: keep
+            regex: opentelemetry-collector
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: prometheus
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      # Microservices Demo metrics
+      - job_name: 'microservices-demo'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - microservices-demo
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+
+      # Jaeger metrics
+      - job_name: 'jaeger'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - observability
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: jaeger
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: metrics
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+# Alertmanager
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 100m
+        memory: 256Mi
+
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# Grafana - Disabled (we'll deploy separately for custom configuration)
+grafana:
+  enabled: false
+
+# Node Exporter - Collect node metrics
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics - Collect Kubernetes metrics
+kubeStateMetrics:
+  enabled: true
+
+# Default Prometheus Rules
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserverAvailability: true
+    kubeApiserverSlos: true
+    kubelet: true
+    kubeProxy: false
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeScheduler: false
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+
+# Additional Prometheus Rules for SRE practices
+additionalPrometheusRulesMap:
+  microservices-slo-rules:
+    groups:
+      - name: microservices_slos
+        interval: 30s
+        rules:
+          # Request Rate (RPS)
+          - record: microservices:request_rate:1m
+            expr: sum(rate(http_server_requests_total[1m])) by (service, namespace)
+
+          # Error Rate
+          - record: microservices:error_rate:1m
+            expr: sum(rate(http_server_requests_total{status=~"5.."}[1m])) by (service, namespace)
+
+          # Error Ratio
+          - record: microservices:error_ratio:1m
+            expr: |
+              sum(rate(http_server_requests_total{status=~"5.."}[1m])) by (service, namespace)
+              /
+              sum(rate(http_server_requests_total[1m])) by (service, namespace)
+
+          # Latency P50
+          - record: microservices:latency:p50
+            expr: histogram_quantile(0.50, sum(rate(http_server_duration_bucket[1m])) by (service, le))
+
+          # Latency P95
+          - record: microservices:latency:p95
+            expr: histogram_quantile(0.95, sum(rate(http_server_duration_bucket[1m])) by (service, le))
+
+          # Latency P99
+          - record: microservices:latency:p99
+            expr: histogram_quantile(0.99, sum(rate(http_server_duration_bucket[1m])) by (service, le))
+
+          # Availability (uptime)
+          - record: microservices:availability:1h
+            expr: |
+              1 - (
+                sum(rate(http_server_requests_total{status=~"5.."}[1h])) by (service)
+                /
+                sum(rate(http_server_requests_total[1h])) by (service)
+              )
+
+  microservices-alerts:
+    groups:
+      - name: microservices_slo_alerts
+        interval: 1m
+        rules:
+          # High Error Rate Alert
+          - alert: HighErrorRate
+            expr: microservices:error_ratio:1m > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              slo: error_rate
+            annotations:
+              summary: "High error rate detected for {{ $labels.service }}"
+              description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+          # Critical Error Rate
+          - alert: CriticalErrorRate
+            expr: microservices:error_ratio:1m > 0.10
+            for: 2m
+            labels:
+              severity: critical
+              slo: error_rate
+            annotations:
+              summary: "CRITICAL: Very high error rate for {{ $labels.service }}"
+              description: "Error rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+          # High Latency P95
+          - alert: HighLatencyP95
+            expr: microservices:latency:p95 > 1.0
+            for: 5m
+            labels:
+              severity: warning
+              slo: latency
+            annotations:
+              summary: "High P95 latency for {{ $labels.service }}"
+              description: "P95 latency is {{ $value }}s (threshold: 1s)"
+
+          # High Latency P99
+          - alert: HighLatencyP99
+            expr: microservices:latency:p99 > 2.0
+            for: 5m
+            labels:
+              severity: warning
+              slo: latency
+            annotations:
+              summary: "High P99 latency for {{ $labels.service }}"
+              description: "P99 latency is {{ $value }}s (threshold: 2s)"
+
+          # Low Availability
+          - alert: LowAvailability
+            expr: microservices:availability:1h < 0.99
+            for: 5m
+            labels:
+              severity: critical
+              slo: availability
+            annotations:
+              summary: "SLO violation: Low availability for {{ $labels.service }}"
+              description: "Availability is {{ $value | humanizePercentage }} (SLO: 99%)"
+
+          # Service Down
+          - alert: ServiceDown
+            expr: up{job="microservices-demo"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Service {{ $labels.pod }} is down"
+              description: "The service has been down for more than 1 minute"

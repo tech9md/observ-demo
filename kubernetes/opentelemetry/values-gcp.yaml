@@ -1,0 +1,339 @@
+# OpenTelemetry Demo - GCP-Optimized Configuration
+# Helm values override for deploying to GKE with GCP exporters
+
+# Global configuration
+global:
+  image:
+    repository: ghcr.io/open-telemetry/demo
+    pullPolicy: IfNotPresent
+
+# Service account with Workload Identity
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: "otel-collector@PROJECT_ID.iam.gserviceaccount.com"
+  name: otel-collector-sa
+
+# OpenTelemetry Collector Configuration
+opentelemetry-collector:
+  enabled: true
+  mode: deployment
+  replicaCount: 2
+
+  # Resource limits optimized for cost
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  # GCP-native exporters configuration
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+      # Prometheus receiver for metrics
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'otel-collector'
+              scrape_interval: 30s
+              static_configs:
+                - targets: ['localhost:8888']
+
+    processors:
+      # Batch processor for efficiency
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      # Memory limiter to prevent OOM
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 25
+
+      # Resource detection for GCP
+      resourcedetection:
+        detectors: [gcp, env]
+        timeout: 5s
+
+      # Sampling to reduce costs (10% sample rate)
+      probabilistic_sampler:
+        sampling_percentage: 10.0
+
+    exporters:
+      # Google Cloud Trace exporter
+      googlecloud:
+        project: "PROJECT_ID"
+        trace:
+          endpoint: cloudtrace.googleapis.com:443
+        metric:
+          endpoint: monitoring.googleapis.com:443
+        log:
+          default_log_name: opentelemetry.io/collector-exported-log
+
+        # Use Workload Identity (no credentials needed)
+        use_insecure: false
+        timeout: 12s
+
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+
+        sending_queue:
+          enabled: true
+          num_consumers: 10
+          queue_size: 1000
+
+      # Logging exporter for debugging (disable in production)
+      logging:
+        loglevel: info
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+      # Prometheus exporter for metrics
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: otel
+        const_labels:
+          environment: demo
+
+    service:
+      pipelines:
+        # Traces pipeline
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resourcedetection, probabilistic_sampler, batch]
+          exporters: [googlecloud, logging]
+
+        # Metrics pipeline
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, resourcedetection, batch]
+          exporters: [googlecloud, prometheus]
+
+        # Logs pipeline
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resourcedetection, batch]
+          exporters: [googlecloud]
+
+# Demo application components with optimized resources
+components:
+  # Frontend
+  frontend:
+    enabled: true
+    replicas: 2
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-collector:4317
+      - name: OTEL_SERVICE_NAME
+        value: frontend
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: deployment.environment=demo,service.version=1.0.0
+
+  # Cart Service
+  cartService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Product Catalog Service
+  productCatalogService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Currency Service
+  currencyService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Payment Service
+  paymentService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Shipping Service
+  shippingService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Email Service
+  emailService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Checkout Service
+  checkoutService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Recommendation Service
+  recommendationService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Ad Service
+  adService:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Load Generator (disabled by default, use traffic generation script instead)
+  loadgenerator:
+    enabled: false
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 300m
+        memory: 256Mi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "gce"
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "REPLACE_WITH_STATIC_IP_NAME"
+    ingress.gcp.kubernetes.io/pre-shared-cert: "REPLACE_WITH_SSL_CERT_NAME"
+    # IAP configuration (if enabled)
+    # cloud.google.com/backend-config: "iap-backend-config"
+
+  hosts:
+    - host: otel-demo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: frontend
+              port:
+                number: 8080
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# Pod Security Policy
+podSecurityPolicy:
+  enabled: false  # GKE Autopilot manages this
+
+# Network Policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: opentelemetry
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443  # GCP APIs
+        - protocol: TCP
+          port: 53   # DNS
+        - protocol: UDP
+          port: 53   # DNS
+
+# Service Monitor for Prometheus (if using Managed Prometheus)
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s

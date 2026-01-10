@@ -1,0 +1,23 @@
+# Core CLI dependencies
+click>=8.1.7
+pydantic>=2.5.0
+pyyaml>=6.0.1
+rich>=13.7.0
+
+# Google Cloud SDK
+google-cloud-storage>=2.14.0
+google-cloud-compute>=1.15.0
+google-cloud-container>=2.35.0
+google-cloud-monitoring>=2.18.0
+google-cloud-logging>=3.9.0
+google-cloud-billing>=1.12.0
+google-cloud-secret-manager>=2.17.0
+google-auth>=2.26.0
+
+# Kubernetes
+kubernetes>=28.1.0
+
+# Utilities
+requests>=2.31.0
+python-dotenv>=1.0.0
+jsonschema>=4.20.0

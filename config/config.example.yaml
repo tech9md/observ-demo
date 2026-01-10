@@ -1,0 +1,97 @@
+# Example Configuration for Observability Demo Automation
+# Copy this file to .config.yaml and update with your values
+
+gcp:
+  # GCP Project ID (6-30 characters, lowercase letters, numbers, hyphens)
+  project_id: my-observ-demo
+
+  # GCP Billing Account ID (format: 012345-6789AB-CDEF01)
+  billing_account: 012345-6789AB-CDEF01
+
+  # Primary GCP region
+  region: us-central1
+
+  # Primary GCP zone (auto-generated from region if not specified)
+  zone: us-central1-a
+
+  # GCP Organization ID (optional, leave empty if not using)
+  org_id: ''
+
+cluster:
+  # GKE cluster name
+  name: observ-demo-cluster
+
+  # Cluster mode: autopilot (recommended for cost) or standard
+  mode: autopilot
+
+  # Minimum nodes (standard mode only, ignored in autopilot)
+  min_nodes: 1
+
+  # Maximum nodes (standard mode only, ignored in autopilot)
+  max_nodes: 3
+
+  # Machine type (standard mode only, ignored in autopilot)
+  machine_type: e2-small
+
+  # Enable private nodes (no external IPs) - recommended for security
+  enable_private_nodes: true
+
+  # Enable Workload Identity for secure pod authentication
+  enable_workload_identity: true
+
+  # Enable Vertical Pod Autoscaling for resource optimization
+  enable_vertical_pod_autoscaling: true
+
+monitoring:
+  # Email addresses for notifications (can be multiple)
+  email_notifications:
+    - admin@example.com
+    - ops@example.com
+
+  # Slack webhook URL for notifications (optional)
+  # Get your webhook URL from: https://api.slack.com/messaging/webhooks
+  slack_webhook: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+  # Monthly budget in USD
+  budget_amount: 100.0
+
+  # Budget thresholds for alerts (as fractions of budget_amount)
+  # Default: alerts at 50%, 75%, 90%, and 100% of budget
+  budget_thresholds:
+    - 0.5   # 50%
+    - 0.75  # 75%
+    - 0.9   # 90%
+    - 1.0   # 100%
+
+deployment:
+  # Deploy OpenTelemetry demo
+  deploy_opentelemetry: true
+
+  # Deploy Google Microservices demo
+  deploy_microservices: true
+
+  # Deploy monitoring stack (Prometheus/Grafana)
+  deploy_monitoring: true
+
+  # Enable automatic traffic generation for realistic demo data
+  enable_traffic_generation: true
+
+  # OpenTelemetry demo image tag
+  opentelemetry_image_tag: latest
+
+  # Microservices demo image tag
+  microservices_image_tag: latest
+
+terraform:
+  # GCS bucket name for Terraform state (auto-generated if not specified)
+  # Format: {project_id}-terraform-state
+  state_bucket_name: null
+
+  # Prefix for state files in bucket
+  state_prefix: terraform/state
+
+  # Enable versioning for state bucket (recommended)
+  enable_versioning: true
+
+  # Enable state locking (recommended)
+  enable_locking: true

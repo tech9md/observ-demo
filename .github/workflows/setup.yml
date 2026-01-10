@@ -1,0 +1,162 @@
+# GCP Observability Demo - Initial Setup
+# One-time setup for GCP project prerequisites
+
+name: Initial GCP Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID'
+        required: true
+        type: string
+      region:
+        description: 'GCP Region'
+        required: true
+        default: 'us-central1'
+        type: choice
+        options:
+          - us-central1
+          - us-east1
+          - us-west1
+          - europe-west1
+          - asia-southeast1
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ github.event.inputs.project_id }}
+
+      - name: Enable Required GCP APIs
+        run: |
+          echo "Enabling required GCP APIs..."
+
+          APIS=(
+            "compute.googleapis.com"
+            "container.googleapis.com"
+            "cloudresourcemanager.googleapis.com"
+            "iam.googleapis.com"
+            "logging.googleapis.com"
+            "monitoring.googleapis.com"
+            "servicenetworking.googleapis.com"
+            "iap.googleapis.com"
+            "billingbudgets.googleapis.com"
+            "cloudbilling.googleapis.com"
+          )
+
+          for api in "${APIS[@]}"; do
+            echo "Enabling $api..."
+            gcloud services enable "$api" --project=${{ github.event.inputs.project_id }} || true
+          done
+
+          echo "All APIs enabled."
+
+      - name: Create Terraform State Bucket
+        run: |
+          BUCKET_NAME="${{ github.event.inputs.project_id }}-tfstate"
+
+          echo "Creating Terraform state bucket: $BUCKET_NAME"
+
+          # Check if bucket exists
+          if gsutil ls -b "gs://$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket already exists."
+          else
+            # Create bucket
+            gsutil mb -p ${{ github.event.inputs.project_id }} \
+              -l ${{ github.event.inputs.region }} \
+              -b on \
+              "gs://$BUCKET_NAME"
+
+            # Enable versioning
+            gsutil versioning set on "gs://$BUCKET_NAME"
+
+            echo "Bucket created with versioning enabled."
+          fi
+
+      - name: Create Service Account for GitHub Actions
+        run: |
+          SA_NAME="github-actions"
+          SA_EMAIL="$SA_NAME@${{ github.event.inputs.project_id }}.iam.gserviceaccount.com"
+
+          echo "Creating service account: $SA_NAME"
+
+          # Create SA if it doesn't exist
+          if gcloud iam service-accounts describe "$SA_EMAIL" --project=${{ github.event.inputs.project_id }} 2>/dev/null; then
+            echo "Service account already exists."
+          else
+            gcloud iam service-accounts create "$SA_NAME" \
+              --project=${{ github.event.inputs.project_id }} \
+              --display-name="GitHub Actions Service Account" \
+              --description="Used by GitHub Actions for CI/CD"
+          fi
+
+          echo "Granting required roles..."
+
+          ROLES=(
+            "roles/container.admin"
+            "roles/compute.admin"
+            "roles/iam.serviceAccountAdmin"
+            "roles/iam.serviceAccountUser"
+            "roles/resourcemanager.projectIamAdmin"
+            "roles/storage.admin"
+            "roles/monitoring.admin"
+            "roles/logging.admin"
+            "roles/iap.admin"
+          )
+
+          for role in "${ROLES[@]}"; do
+            echo "Granting $role..."
+            gcloud projects add-iam-policy-binding ${{ github.event.inputs.project_id }} \
+              --member="serviceAccount:$SA_EMAIL" \
+              --role="$role" \
+              --quiet || true
+          done
+
+          echo ""
+          echo "============================================"
+          echo "SETUP COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "Service Account: $SA_EMAIL"
+          echo "State Bucket: gs://${{ github.event.inputs.project_id }}-tfstate"
+          echo ""
+          echo "IMPORTANT: Create a key for the service account and add it as"
+          echo "a GitHub secret named GCP_SA_KEY:"
+          echo ""
+          echo "gcloud iam service-accounts keys create key.json \\"
+          echo "  --iam-account=$SA_EMAIL"
+          echo ""
+          echo "Then add the contents of key.json as the GCP_SA_KEY secret."
+          echo ""
+
+      - name: Summary
+        run: |
+          echo "## Setup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project ID | ${{ github.event.inputs.project_id }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ github.event.inputs.region }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| State Bucket | gs://${{ github.event.inputs.project_id }}-tfstate |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service Account | github-actions@${{ github.event.inputs.project_id }}.iam.gserviceaccount.com |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Create a key for the service account" >> $GITHUB_STEP_SUMMARY
+          echo "2. Add it as a GitHub secret named \`GCP_SA_KEY\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Add \`GCP_PROJECT_ID\` secret with value: ${{ github.event.inputs.project_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "4. Add \`GCP_BILLING_ACCOUNT\` secret with your billing account ID" >> $GITHUB_STEP_SUMMARY
+          echo "5. Run the 'Deploy Observability Demo' workflow" >> $GITHUB_STEP_SUMMARY

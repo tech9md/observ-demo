@@ -1,0 +1,40 @@
+# Terraform Backend Configuration Template
+#
+# INSTRUCTIONS:
+# 1. Run initial Terraform apply WITHOUT this backend configured (uses local state)
+# 2. After GCS bucket is created, copy this file to backend.tf
+# 3. Replace REPLACE_WITH_STATE_BUCKET_NAME with actual bucket name
+# 4. Run: terraform init -migrate-state
+# 5. Confirm state migration when prompted
+#
+# This ensures Terraform state is stored in GCS with versioning and locking
+
+terraform {
+  backend "gcs" {
+    # GCS bucket for state storage (created by project-setup module)
+    bucket = "REPLACE_WITH_STATE_BUCKET_NAME"
+
+    # Path within bucket for state file
+    prefix = "terraform/state"
+
+    # Enable state locking via GCS (prevents concurrent modifications)
+    # No additional configuration needed - GCS provides native locking
+
+    # Optional: Encrypt state file (enabled by default on GCS)
+    # encryption_key = "projects/PROJECT_ID/locations/LOCATION/keyRings/KEYRING/cryptoKeys/KEY"
+  }
+}
+
+# EXAMPLE CONFIGURATION:
+#
+# If your state bucket name is "my-project-terraform-state", the configuration would be:
+#
+# terraform {
+#   backend "gcs" {
+#     bucket = "my-project-terraform-state"
+#     prefix = "terraform/state"
+#   }
+# }
+#
+# Then run:
+# terraform init -migrate-state

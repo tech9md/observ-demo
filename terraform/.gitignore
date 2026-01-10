@@ -1,0 +1,74 @@
+# Terraform-specific .gitignore
+# Prevents sensitive data and generated files from being committed
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files - contain sensitive data
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which might contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files (used for local development)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore Terraform plan files
+*.tfplan
+tfplan
+plan.out
+
+# Ignore backend configuration (created from template)
+backend.tf
+
+# Ignore generated kubeconfig files
+*.kubeconfig
+kubeconfig
+
+# Ignore Terraform lock file in most cases
+# Uncomment if you want to track provider versions:
+# .terraform.lock.hcl
+
+# Keep example files and templates
+!*.example
+!*.template
+!terraform.tfvars.example
+!backend.tf.template
+
+# Ignore module download cache
+.terraform.d/
+modules/
+
+# Ignore backup files
+*.backup
+*.bak
+*~
+
+# Ignore test files
+test/
+tests/
+
+# Ignore local environment files
+.env
+.env.local
+.envrc
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

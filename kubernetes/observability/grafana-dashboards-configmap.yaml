@@ -1,0 +1,14 @@
+# Grafana Dashboards ConfigMaps
+# These ConfigMaps contain dashboard JSON files that will be auto-loaded into Grafana
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-sre
+  namespace: observability
+  labels:
+    app: grafana
+    grafana_dashboard: "1"
+data:
+  golden-signals.json: |
