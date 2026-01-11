@@ -98,18 +98,15 @@ module "vpc_network" {
   region       = var.region
   network_name = local.network_name
 
-  # Subnet configuration
-  subnet_name        = local.subnet_name
-  subnet_cidr        = var.subnet_cidr
-  pods_cidr          = var.pods_cidr
-  services_cidr      = var.services_cidr
-  pods_range_name    = "gke-pods"
-  services_range_name = "gke-services"
+  # Subnet configuration (use module's variable names)
+  gke_subnet_cidr   = var.subnet_cidr
+  gke_pods_cidr     = var.pods_cidr
+  gke_services_cidr = var.services_cidr
 
   # Network features
-  enable_flow_logs   = var.enable_flow_logs
-  create_static_ip   = var.create_static_ip
-  enable_ssh_access  = var.enable_ssh_access
+  enable_flow_logs  = var.enable_flow_logs
+  create_static_ip  = var.create_static_ip
+  enable_ssh_access = var.enable_ssh_access
 
   labels = local.common_labels
 
