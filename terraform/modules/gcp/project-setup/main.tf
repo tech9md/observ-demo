@@ -203,8 +203,4 @@ resource "google_project_iam_member" "microservices_roles" {
   depends_on = [google_service_account.microservices_demo]
 }
 
-# Output information about enabled APIs
-output "enabled_apis" {
-  description = "List of enabled GCP APIs"
-  value       = [for api in google_project_service.required_apis : api.service]
-}
+# Note: Outputs are defined in outputs.tf

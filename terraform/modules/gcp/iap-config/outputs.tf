@@ -101,28 +101,27 @@ output "iap_summary" {
 # Access instructions
 output "access_instructions" {
   description = "Instructions for accessing IAP-protected resources"
-  value = var.create_static_ip ? <<-EOT
-    IAP-Protected Resources Access:
-
-    1. Ensure you're authenticated with Google Cloud:
-       gcloud auth login
-
-    2. Access the application:
-       URL: https://${google_compute_global_address.iap_lb_ip[0].address}
-
-    3. You'll be prompted to sign in with Google
-       Authorized users: ${join(", ", var.iap_users)}
-
-    4. For SSH/RDP via IAP tunnel (if enabled):
-       gcloud compute ssh INSTANCE_NAME --tunnel-through-iap
-       gcloud compute start-iap-tunnel INSTANCE_NAME PORT --local-host-port=localhost:LOCAL_PORT
-
-    5. Troubleshooting:
-       - Verify you're in the authorized users list
-       - Check IAM permissions: roles/iap.httpsResourceAccessor
-       - Review logs: gcloud logging read "resource.type=gce_backend_service"
-  EOT
-  : "IAP configuration pending - static IP not created"
+  value = var.create_static_ip ? join("\n", [
+    "IAP-Protected Resources Access:",
+    "",
+    "1. Ensure you're authenticated with Google Cloud:",
+    "   gcloud auth login",
+    "",
+    "2. Access the application:",
+    "   URL: https://${google_compute_global_address.iap_lb_ip[0].address}",
+    "",
+    "3. You'll be prompted to sign in with Google",
+    "   Authorized users: ${join(", ", var.iap_users)}",
+    "",
+    "4. For SSH/RDP via IAP tunnel (if enabled):",
+    "   gcloud compute ssh INSTANCE_NAME --tunnel-through-iap",
+    "   gcloud compute start-iap-tunnel INSTANCE_NAME PORT --local-host-port=localhost:LOCAL_PORT",
+    "",
+    "5. Troubleshooting:",
+    "   - Verify you're in the authorized users list",
+    "   - Check IAM permissions: roles/iap.httpsResourceAccessor",
+    "   - Review logs: gcloud logging read 'resource.type=gce_backend_service'"
+  ]) : "IAP configuration pending - static IP not created"
 }
 
 # Kubernetes annotation for IAP
