@@ -1,33 +1,11 @@
-# Terraform and Provider Version Constraints
-# This file ensures consistent provider versions across all environments
+# Terraform Version Constraints
+# Note: Provider versions are defined in main.tf to avoid duplication
+# This file is kept for documentation purposes
 
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-    google-beta = {
-      source  = "hashicorp/google-beta"
-      version = "~> 5.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.11"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-  }
-}
+# The following providers are used in this project:
+# - google (~> 5.0) - Main GCP provider
+# - google-beta (~> 5.0) - Beta features
+# - kubernetes (~> 2.23) - Kubernetes resources
+# - helm (~> 2.11) - Helm chart deployments
+# - local (~> 2.4) - Local file operations
+# - null (~> 3.2) - Null resources for triggers

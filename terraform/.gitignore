@@ -31,9 +31,6 @@ terraform.rc
 tfplan
 plan.out
 
-# Ignore backend configuration (created from template)
-backend.tf
-
 # Ignore generated kubeconfig files
 *.kubeconfig
 kubeconfig
@@ -48,9 +45,10 @@ kubeconfig
 !terraform.tfvars.example
 !backend.tf.template
 
-# Ignore module download cache
+# Ignore module download cache (downloaded from registry, not our custom modules)
 .terraform.d/
-modules/
+# Note: Our custom modules in modules/gcp/ should be tracked
+# The .terraform/modules/ is already ignored by **/.terraform/*
 
 # Ignore backup files
 *.backup
