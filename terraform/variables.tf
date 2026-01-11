@@ -233,6 +233,12 @@ variable "iap_brand_name" {
   default     = "Observability Demo"
 }
 
+variable "iap_support_email" {
+  description = "Support email for IAP OAuth consent screen (falls back to notification_email if empty)"
+  type        = string
+  default     = ""
+}
+
 variable "create_iap_brand" {
   description = "Create new IAP brand (OAuth consent screen)"
   type        = bool

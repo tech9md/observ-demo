@@ -73,19 +73,14 @@ locals {
 module "project_setup" {
   source = "./modules/gcp/project-setup"
 
-  project_id         = var.project_id
-  billing_account    = var.billing_account
-  region             = var.region
-  state_bucket_name  = var.state_bucket_name
+  project_id        = var.project_id
+  billing_account   = var.billing_account
+  region            = var.region
+  state_bucket_name = var.state_bucket_name
+  environment       = var.environment
 
-  # Service accounts
-  otel_service_account_name          = local.otel_sa_name
-  microservices_service_account_name = local.microservices_sa_name
-
-  # Enable optional features
-  enable_cloud_trace      = var.enable_cloud_trace
-  enable_cloud_monitoring = var.enable_cloud_monitoring
-  enable_cloud_logging    = var.enable_cloud_logging
+  # Enable workload identity service accounts
+  create_workload_identities = true
 
   labels = local.common_labels
 }
@@ -170,10 +165,10 @@ module "iap_config" {
   count  = var.enable_iap ? 1 : 0
 
   project_id = var.project_id
-  region     = var.region
 
-  # IAP configuration
-  iap_brand_name      = var.iap_brand_name
+  # IAP configuration (use module's variable names)
+  application_title   = var.iap_brand_name
+  support_email       = var.iap_support_email != "" ? var.iap_support_email : var.notification_email
   create_brand        = var.create_iap_brand
   existing_brand_name = var.existing_iap_brand_name
   create_oauth_client = var.create_oauth_client
@@ -183,14 +178,12 @@ module "iap_config" {
   backend_service_names = var.iap_backend_services
 
   # Network resources
-  network_name       = module.vpc_network.network_name
-  create_static_ip   = var.create_iap_static_ip
-  static_ip_name     = "${local.cluster_name}-iap-ip"
+  network_name     = module.vpc_network.network_name
+  create_static_ip = var.create_iap_static_ip
 
   # SSL configuration
   create_ssl_certificate = var.create_ssl_certificate
   domains                = var.ssl_domains
-  certificate_name       = "${local.cluster_name}-ssl-cert"
 
   # Load balancer configuration
   create_url_map         = var.create_url_map
@@ -202,8 +195,7 @@ module "iap_config" {
   create_security_policy = var.create_security_policy
   enable_rate_limiting   = var.enable_rate_limiting
   rate_limit_threshold   = var.rate_limit_threshold
-  allowed_countries      = var.allowed_countries
-  blocked_countries      = var.blocked_countries
+  blocked_regions        = var.blocked_countries
 
   # Firewall
   create_firewall_rule = var.create_iap_firewall
@@ -221,34 +213,31 @@ module "monitoring" {
   source = "./modules/gcp/monitoring"
 
   project_id   = var.project_id
-  region       = var.region
   cluster_name = local.cluster_name
 
-  # Notification channels
-  notification_email   = var.notification_email
-  notification_slack   = var.notification_slack
-  notification_pagerduty = var.notification_pagerduty
+  # Notification channels (use module's variable names)
+  notification_emails   = var.notification_email != "" ? [var.notification_email] : []
+  slack_webhook_url     = var.notification_slack
+  pagerduty_service_key = var.notification_pagerduty
 
-  # Alert configuration
-  enable_cluster_health_alerts = var.enable_cluster_health_alerts
-  enable_pod_alerts            = var.enable_pod_alerts
-  enable_error_rate_alerts     = var.enable_error_rate_alerts
-  enable_resource_alerts       = var.enable_resource_alerts
-  enable_deployment_alerts     = var.enable_deployment_alerts
+  # Alert configuration (use module's variable names)
+  enable_gke_alerts        = var.enable_cluster_health_alerts
+  enable_pod_alerts        = var.enable_pod_alerts
+  enable_error_alerts      = var.enable_error_rate_alerts
+  enable_resource_alerts   = var.enable_resource_alerts
+  enable_deployment_alerts = var.enable_deployment_alerts
 
-  # Alert thresholds
-  cpu_threshold_percent    = var.cpu_threshold_percent
-  memory_threshold_percent = var.memory_threshold_percent
-  error_rate_threshold     = var.error_rate_threshold
+  # Alert thresholds (module uses absolute values, not percentages)
+  cpu_threshold          = var.cpu_threshold_percent / 100  # Convert to cores (0.8 = 80%)
+  memory_threshold_bytes = var.memory_threshold_percent * 21474836  # ~2GB at 100%
+  error_rate_threshold   = var.error_rate_threshold
 
   # Dashboard configuration
-  create_overview_dashboard = var.create_overview_dashboard
-  create_gke_dashboard      = var.create_gke_dashboard
-  dashboard_name_prefix     = "${local.cluster_name}"
+  create_gke_dashboard = var.create_gke_dashboard
 
-  # Uptime checks (optional)
+  # Uptime checks (optional) - module uses single host/path not URLs
   create_uptime_checks = var.create_uptime_checks
-  uptime_check_urls    = var.uptime_check_urls
+  uptime_check_host    = length(var.uptime_check_urls) > 0 ? var.uptime_check_urls[0] : ""
 
   labels = local.common_labels
 
@@ -261,18 +250,18 @@ module "budget_alerts" {
 
   project_id      = var.project_id
   billing_account = var.billing_account
+  region          = var.region
 
   # Budget configuration
   budget_amount   = var.budget_amount
   currency_code   = var.currency_code
   calendar_period = var.calendar_period
 
-  # Threshold rules
+  # Threshold rules (using module's default if not specified)
   threshold_rules = var.budget_threshold_rules
 
-  # Notifications
-  notification_email = var.notification_email
-  notification_slack = var.notification_slack
+  # Notifications - use monitoring notification channels from monitoring module
+  monitoring_notification_channels = var.notification_email != "" ? module.monitoring.notification_channel_ids : []
 
   # Pub/Sub configuration
   create_pubsub_subscription = var.create_budget_subscription
@@ -282,14 +271,13 @@ module "budget_alerts" {
 
   # Monitoring integration
   create_monitoring_alert = var.create_budget_monitoring_alert
-  alert_threshold_percent = var.budget_alert_threshold
 
   # Cost metric (optional)
   create_cost_metric = var.create_cost_metric
 
   labels = local.common_labels
 
-  depends_on = [module.project_setup]
+  depends_on = [module.project_setup, module.monitoring]
 }
 
 # Kubernetes provider configuration (after cluster creation)
