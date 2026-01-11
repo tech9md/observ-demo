@@ -69,7 +69,7 @@ variable "threshold_rules" {
   }))
   default = [
     {
-      threshold_percent = 0.5  # 50%
+      threshold_percent = 0.5 # 50%
       spend_basis       = "CURRENT_SPEND"
     },
     {
@@ -77,15 +77,15 @@ variable "threshold_rules" {
       spend_basis       = "CURRENT_SPEND"
     },
     {
-      threshold_percent = 0.9  # 90%
+      threshold_percent = 0.9 # 90%
       spend_basis       = "CURRENT_SPEND"
     },
     {
-      threshold_percent = 1.0  # 100%
+      threshold_percent = 1.0 # 100%
       spend_basis       = "CURRENT_SPEND"
     },
     {
-      threshold_percent = 1.0  # 100% forecasted
+      threshold_percent = 1.0 # 100% forecasted
       spend_basis       = "FORECASTED_SPEND"
     }
   ]

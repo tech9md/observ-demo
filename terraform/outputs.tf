@@ -59,8 +59,8 @@ output "static_ip" {
   value       = module.vpc_network.static_ip
 }
 
-output "nat_ip" {
-  description = "Cloud NAT IP addresses"
+output "nat_name" {
+  description = "Cloud NAT name (uses AUTO_ONLY allocation, no static IPs)"
   value       = module.vpc_network.nat_name
 }
 
@@ -224,7 +224,7 @@ output "kubectl_command" {
 output "access_urls" {
   description = "URLs for accessing services"
   value = {
-    gke_console      = "https://console.cloud.google.com/kubernetes/clusters/details/${var.region}/${module.gke_cluster.cluster_name}?project=${var.project_id}"
+    gke_console      = "https://console.cloud.google.com/kubernetes/clusters/details/${var.regional_cluster ? var.region : var.zone}/${module.gke_cluster.cluster_name}?project=${var.project_id}"
     monitoring       = "https://console.cloud.google.com/monitoring?project=${var.project_id}"
     logging          = "https://console.cloud.google.com/logs?project=${var.project_id}"
     trace            = "https://console.cloud.google.com/traces?project=${var.project_id}"
@@ -285,7 +285,7 @@ output "next_steps" {
        Visit: https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}
 
     7. Access Cloud Console:
-       GKE:        ${module.vpc_network.network_summary.network_name != "" ? "https://console.cloud.google.com/kubernetes/clusters/details/${var.region}/${module.gke_cluster.cluster_name}?project=${var.project_id}" : "Not available"}
+       GKE:        https://console.cloud.google.com/kubernetes/clusters/details/${var.regional_cluster ? var.region : var.zone}/${module.gke_cluster.cluster_name}?project=${var.project_id}
        Monitoring: https://console.cloud.google.com/monitoring?project=${var.project_id}
        Trace:      https://console.cloud.google.com/traces?project=${var.project_id}
 

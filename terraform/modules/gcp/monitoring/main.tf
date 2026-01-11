@@ -326,7 +326,7 @@ resource "google_monitoring_alert_policy" "lb_errors" {
 
 # Dashboard: Observability Demo Overview
 resource "google_monitoring_dashboard" "overview" {
-  project        = var.project_id
+  project = var.project_id
   dashboard_json = templatefile("${path.module}/dashboards/overview.json.tpl", {
     project_id   = var.project_id
     cluster_name = var.cluster_name
@@ -337,7 +337,7 @@ resource "google_monitoring_dashboard" "overview" {
 resource "google_monitoring_dashboard" "gke_metrics" {
   count = var.create_gke_dashboard ? 1 : 0
 
-  project        = var.project_id
+  project = var.project_id
   dashboard_json = templatefile("${path.module}/dashboards/gke-metrics.json.tpl", {
     project_id   = var.project_id
     cluster_name = var.cluster_name

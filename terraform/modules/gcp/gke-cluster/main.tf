@@ -75,7 +75,9 @@ resource "google_container_cluster" "autopilot" {
     }
   }
 
-  # Cluster addons
+  # Cluster addons (limited options available for Autopilot)
+  # Note: network_policy_config, dns_cache_config, and gcp_filestore_csi_driver_config
+  # are not compatible with GKE Autopilot as they are managed automatically
   addons_config {
     # HTTP load balancing for Ingress
     http_load_balancing {
@@ -87,22 +89,7 @@ resource "google_container_cluster" "autopilot" {
       disabled = false
     }
 
-    # GKE Network Policy enforcement
-    network_policy_config {
-      disabled = false
-    }
-
-    # Cloud DNS for GKE
-    dns_cache_config {
-      enabled = true
-    }
-
-    # GKE Backup for Workloads (optional)
-    gcp_filestore_csi_driver_config {
-      enabled = false # Not needed for demo
-    }
-
-    # GKE monitoring
+    # GCE Persistent Disk CSI driver (supported in Autopilot)
     gce_persistent_disk_csi_driver_config {
       enabled = true
     }
@@ -116,11 +103,8 @@ resource "google_container_cluster" "autopilot" {
     }
   }
 
-  # Cluster-level network policy
-  network_policy {
-    enabled  = true
-    provider = "PROVIDER_UNSPECIFIED" # Autopilot manages this
-  }
+  # Note: network_policy block is not compatible with GKE Autopilot
+  # Autopilot clusters automatically manage network policies
 
   # Vertical Pod Autoscaling
   vertical_pod_autoscaling {

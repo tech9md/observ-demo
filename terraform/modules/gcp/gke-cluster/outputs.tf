@@ -116,20 +116,20 @@ output "kubeconfig_path" {
 output "cluster_summary" {
   description = "Summary of cluster configuration"
   value = {
-    name                  = google_container_cluster.autopilot.name
-    location              = google_container_cluster.autopilot.location
-    endpoint              = google_container_cluster.autopilot.endpoint
-    autopilot_enabled     = google_container_cluster.autopilot.enable_autopilot
-    private_nodes         = var.enable_private_nodes
-    private_endpoint      = var.enable_private_endpoint
-    workload_identity     = true
-    release_channel       = var.release_channel
-    master_version        = google_container_cluster.autopilot.master_version
-    vpc_network           = var.network_name
-    subnetwork            = var.subnetwork_name
-    regional              = var.regional_cluster
-    security_posture      = var.enable_security_posture
-    managed_prometheus    = var.enable_managed_prometheus
+    name               = google_container_cluster.autopilot.name
+    location           = google_container_cluster.autopilot.location
+    endpoint           = google_container_cluster.autopilot.endpoint
+    autopilot_enabled  = google_container_cluster.autopilot.enable_autopilot
+    private_nodes      = var.enable_private_nodes
+    private_endpoint   = var.enable_private_endpoint
+    workload_identity  = true
+    release_channel    = var.release_channel
+    master_version     = google_container_cluster.autopilot.master_version
+    vpc_network        = var.network_name
+    subnetwork         = var.subnetwork_name
+    regional           = var.regional_cluster
+    security_posture   = var.enable_security_posture
+    managed_prometheus = var.enable_managed_prometheus
   }
 }
 

@@ -68,12 +68,12 @@ output "threshold_rules" {
 output "budget_summary" {
   description = "Summary of budget configuration"
   value = {
-    name           = google_billing_budget.budget.display_name
-    amount         = "${var.currency_code} ${var.budget_amount}"
-    period         = var.calendar_period
+    name            = google_billing_budget.budget.display_name
+    amount          = "${var.currency_code} ${var.budget_amount}"
+    period          = var.calendar_period
     threshold_count = length(var.threshold_rules)
-    pubsub_topic   = google_pubsub_topic.budget_alerts.name
-    alerts_enabled = var.create_monitoring_alert
+    pubsub_topic    = google_pubsub_topic.budget_alerts.name
+    alerts_enabled  = var.create_monitoring_alert
   }
 }
 
@@ -91,7 +91,7 @@ output "budget_links" {
 # Cost optimization recommendations
 output "cost_optimization_tips" {
   description = "Cost optimization recommendations"
-  value = <<-EOT
+  value       = <<-EOT
     Cost Optimization Tips:
 
     1. **GKE Autopilot**: Already using pay-per-pod pricing

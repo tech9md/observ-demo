@@ -50,21 +50,11 @@ resource "google_billing_budget" "budget" {
   budget_filter {
     projects = ["projects/${var.project_id}"]
 
-    # Filter by services (optional)
-    dynamic "services" {
-      for_each = length(var.services) > 0 ? [1] : []
-      content {
-        service_ids = var.services
-      }
-    }
+    # Filter by services (optional) - pass directly as a list
+    services = length(var.services) > 0 ? var.services : null
 
-    # Filter by labels (optional)
-    dynamic "labels" {
-      for_each = length(var.budget_labels) > 0 ? [1] : []
-      content {
-        values = var.budget_labels
-      }
-    }
+    # Filter by labels (optional) - pass as map
+    labels = length(var.budget_labels) > 0 ? var.budget_labels : null
 
     # Calendar period or custom period
     calendar_period = var.calendar_period
@@ -178,7 +168,7 @@ resource "google_monitoring_alert_policy" "budget_exceeded" {
   notification_channels = var.monitoring_notification_channels
 
   documentation {
-    content = <<-EOT
+    content   = <<-EOT
       Monthly budget threshold exceeded!
 
       **Current Budget:** ${var.currency_code} ${var.budget_amount}

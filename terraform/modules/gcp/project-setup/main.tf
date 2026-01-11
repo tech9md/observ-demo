@@ -61,14 +61,14 @@ resource "google_service_account" "terraform" {
 # Grant necessary IAM roles to Terraform service account
 locals {
   terraform_roles = [
-    "roles/compute.networkAdmin",           # VPC management
-    "roles/container.admin",                # GKE management
-    "roles/iam.serviceAccountAdmin",        # Service account creation
-    "roles/iam.serviceAccountUser",         # Service account impersonation
+    "roles/compute.networkAdmin",            # VPC management
+    "roles/container.admin",                 # GKE management
+    "roles/iam.serviceAccountAdmin",         # Service account creation
+    "roles/iam.serviceAccountUser",          # Service account impersonation
     "roles/resourcemanager.projectIamAdmin", # IAM management
-    "roles/storage.admin",                  # GCS for state and artifacts
-    "roles/monitoring.admin",               # Cloud Monitoring
-    "roles/logging.admin",                  # Cloud Logging
+    "roles/storage.admin",                   # GCS for state and artifacts
+    "roles/monitoring.admin",                # Cloud Monitoring
+    "roles/logging.admin",                   # Cloud Logging
   ]
 }
 
@@ -158,8 +158,8 @@ resource "google_service_account" "otel_collector" {
 locals {
   otel_roles = [
     "roles/cloudtrace.agent",        # Cloud Trace write
-    "roles/monitoring.metricWriter",  # Cloud Monitoring write
-    "roles/logging.logWriter",        # Cloud Logging write
+    "roles/monitoring.metricWriter", # Cloud Monitoring write
+    "roles/logging.logWriter",       # Cloud Logging write
   ]
 }
 

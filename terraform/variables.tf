@@ -407,6 +407,12 @@ variable "enable_deployment_alerts" {
   default     = true
 }
 
+variable "enable_lb_alerts" {
+  description = "Enable load balancer alerts"
+  type        = bool
+  default     = true
+}
+
 variable "cpu_threshold_percent" {
   description = "CPU usage threshold for alerts (percent)"
   type        = number
@@ -462,6 +468,12 @@ variable "uptime_check_urls" {
 # =============================================================================
 # BUDGET & COST CONFIGURATION
 # =============================================================================
+
+variable "budget_name" {
+  description = "Name of the budget"
+  type        = string
+  default     = "observ-demo-budget"
+}
 
 variable "budget_amount" {
   description = "Monthly budget amount"

@@ -86,15 +86,15 @@ output "tunnel_service_account_email" {
 output "iap_summary" {
   description = "Summary of IAP configuration"
   value = {
-    brand_created            = var.create_brand
-    oauth_client_created     = var.create_oauth_client
-    authorized_users_count   = length(var.iap_users)
-    backend_services_count   = length(var.backend_service_names)
-    static_ip_created        = var.create_static_ip
-    ssl_certificate_created  = var.create_ssl_certificate && length(var.domains) > 0
-    security_policy_created  = var.create_security_policy
-    rate_limiting_enabled    = var.enable_rate_limiting
-    firewall_rule_created    = var.create_firewall_rule
+    brand_created           = var.create_brand
+    oauth_client_created    = var.create_oauth_client
+    authorized_users_count  = length(var.iap_users)
+    backend_services_count  = length(var.backend_service_names)
+    static_ip_created       = var.create_static_ip
+    ssl_certificate_created = var.create_ssl_certificate && length(var.domains) > 0
+    security_policy_created = var.create_security_policy
+    rate_limiting_enabled   = var.enable_rate_limiting
+    firewall_rule_created   = var.create_firewall_rule
   }
 }
 
@@ -128,10 +128,10 @@ output "access_instructions" {
 output "kubernetes_ingress_annotation" {
   description = "Annotation to add to Kubernetes Ingress for IAP"
   value = var.create_oauth_client ? {
-    "ingress.gcp.kubernetes.io/pre-shared-cert"           = var.create_ssl_certificate && length(var.domains) > 0 ? google_compute_managed_ssl_certificate.iap_cert[0].name : "your-cert-name"
-    "cloud.google.com/backend-config"                     = "iap-backend-config"
-    "kubernetes.io/ingress.global-static-ip-name"         = var.create_static_ip ? google_compute_global_address.iap_lb_ip[0].name : "your-ip-name"
-    "cloud.google.com/armor-config"                       = var.create_security_policy ? google_compute_security_policy.iap_policy[0].name : null
+    "ingress.gcp.kubernetes.io/pre-shared-cert"   = var.create_ssl_certificate && length(var.domains) > 0 ? google_compute_managed_ssl_certificate.iap_cert[0].name : "your-cert-name"
+    "cloud.google.com/backend-config"             = "iap-backend-config"
+    "kubernetes.io/ingress.global-static-ip-name" = var.create_static_ip ? google_compute_global_address.iap_lb_ip[0].name : "your-ip-name"
+    "cloud.google.com/armor-config"               = var.create_security_policy ? google_compute_security_policy.iap_policy[0].name : null
   } : {}
 }
 

@@ -88,12 +88,12 @@ output "static_ip_name" {
 output "firewall_rules" {
   description = "List of created firewall rules"
   value = {
-    allow_internal     = google_compute_firewall.allow_internal.name
+    allow_internal      = google_compute_firewall.allow_internal.name
     allow_health_checks = google_compute_firewall.allow_health_checks.name
-    allow_iap          = google_compute_firewall.allow_iap.name
-    deny_all_ingress   = google_compute_firewall.deny_all_ingress.name
-    allow_egress       = google_compute_firewall.allow_egress.name
-    allow_ssh          = var.enable_ssh_access ? google_compute_firewall.allow_ssh[0].name : null
+    allow_iap           = google_compute_firewall.allow_iap.name
+    deny_all_ingress    = google_compute_firewall.deny_all_ingress.name
+    allow_egress        = google_compute_firewall.allow_egress.name
+    allow_ssh           = var.enable_ssh_access ? google_compute_firewall.allow_ssh[0].name : null
   }
 }
 
@@ -101,14 +101,14 @@ output "firewall_rules" {
 output "network_summary" {
   description = "Summary of network configuration"
   value = {
-    network_name         = google_compute_network.vpc.name
-    region               = var.region
-    gke_subnet          = google_compute_subnetwork.gke_subnet.name
-    gke_nodes_cidr      = google_compute_subnetwork.gke_subnet.ip_cidr_range
-    gke_pods_cidr       = google_compute_subnetwork.gke_subnet.secondary_ip_range[0].ip_cidr_range
-    gke_services_cidr   = google_compute_subnetwork.gke_subnet.secondary_ip_range[1].ip_cidr_range
-    cloud_nat_enabled   = true
-    flow_logs_enabled   = var.enable_flow_logs
-    static_ip_created   = var.create_static_ip
+    network_name      = google_compute_network.vpc.name
+    region            = var.region
+    gke_subnet        = google_compute_subnetwork.gke_subnet.name
+    gke_nodes_cidr    = google_compute_subnetwork.gke_subnet.ip_cidr_range
+    gke_pods_cidr     = google_compute_subnetwork.gke_subnet.secondary_ip_range[0].ip_cidr_range
+    gke_services_cidr = google_compute_subnetwork.gke_subnet.secondary_ip_range[1].ip_cidr_range
+    cloud_nat_enabled = true
+    flow_logs_enabled = var.enable_flow_logs
+    static_ip_created = var.create_static_ip
   }
 }

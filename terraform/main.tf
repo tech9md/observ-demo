@@ -54,15 +54,15 @@ locals {
   )
 
   # Network configuration
-  network_name    = "${var.project_id}-vpc"
-  subnet_name     = "${var.project_id}-gke-subnet"
+  network_name = "${var.project_id}-vpc"
+  subnet_name  = "${var.project_id}-gke-subnet"
 
   # GKE configuration
-  cluster_name    = var.cluster_name != "" ? var.cluster_name : "${var.project_id}-gke"
+  cluster_name = var.cluster_name != "" ? var.cluster_name : "${var.project_id}-gke"
 
   # Service account names
-  otel_sa_name           = "otel-collector"
-  microservices_sa_name  = "microservices-app"
+  otel_sa_name          = "otel-collector"
+  microservices_sa_name = "microservices-app"
 
   # Kubernetes namespaces
   otel_namespace          = "opentelemetry"
@@ -118,31 +118,31 @@ module "gke_cluster" {
   cluster_name = local.cluster_name
 
   # Network configuration
-  network_name         = module.vpc_network.network_name
-  network_self_link    = module.vpc_network.network_self_link
-  subnetwork_name      = module.vpc_network.gke_subnet_name
-  pods_range_name      = module.vpc_network.gke_pods_range_name
-  services_range_name  = module.vpc_network.gke_services_range_name
+  network_name        = module.vpc_network.network_name
+  network_self_link   = module.vpc_network.network_self_link
+  subnetwork_name     = module.vpc_network.gke_subnet_name
+  pods_range_name     = module.vpc_network.gke_pods_range_name
+  services_range_name = module.vpc_network.gke_services_range_name
 
   # Cluster configuration
-  regional_cluster               = var.regional_cluster
-  enable_private_nodes           = var.enable_private_nodes
-  enable_private_endpoint        = var.enable_private_endpoint
-  master_ipv4_cidr_block         = var.master_ipv4_cidr_block
-  master_authorized_networks     = var.master_authorized_networks
+  regional_cluster           = var.regional_cluster
+  enable_private_nodes       = var.enable_private_nodes
+  enable_private_endpoint    = var.enable_private_endpoint
+  master_ipv4_cidr_block     = var.master_ipv4_cidr_block
+  master_authorized_networks = var.master_authorized_networks
 
   # Features
-  release_channel                    = var.release_channel
-  enable_binary_authorization        = var.enable_binary_authorization
-  enable_vertical_pod_autoscaling    = var.enable_vertical_pod_autoscaling
-  enable_managed_prometheus          = var.enable_managed_prometheus
-  enable_security_posture            = var.enable_security_posture
-  deletion_protection                = var.deletion_protection
+  release_channel                 = var.release_channel
+  enable_binary_authorization     = var.enable_binary_authorization
+  enable_vertical_pod_autoscaling = var.enable_vertical_pod_autoscaling
+  enable_managed_prometheus       = var.enable_managed_prometheus
+  enable_security_posture         = var.enable_security_posture
+  deletion_protection             = var.deletion_protection
 
   # Workload Identity bindings
-  otel_service_account_email          = module.project_setup.otel_service_account_email
-  otel_namespace                      = local.otel_namespace
-  otel_service_account_name           = "otel-collector-sa"
+  otel_service_account_email = module.project_setup.otel_service_account_email
+  otel_namespace             = local.otel_namespace
+  otel_service_account_name  = "otel-collector-sa"
 
   microservices_service_account_email = module.project_setup.microservices_service_account_email
   microservices_namespace             = local.microservices_namespace
@@ -226,10 +226,11 @@ module "monitoring" {
   enable_error_alerts      = var.enable_error_rate_alerts
   enable_resource_alerts   = var.enable_resource_alerts
   enable_deployment_alerts = var.enable_deployment_alerts
+  enable_lb_alerts         = var.enable_lb_alerts
 
   # Alert thresholds (module uses absolute values, not percentages)
-  cpu_threshold          = var.cpu_threshold_percent / 100  # Convert to cores (0.8 = 80%)
-  memory_threshold_bytes = var.memory_threshold_percent * 21474836  # ~2GB at 100%
+  cpu_threshold          = var.cpu_threshold_percent / 100         # Convert to cores (0.8 = 80%)
+  memory_threshold_bytes = var.memory_threshold_percent * 21474836 # ~2GB at 100%
   error_rate_threshold   = var.error_rate_threshold
 
   # Dashboard configuration
@@ -253,6 +254,7 @@ module "budget_alerts" {
   region          = var.region
 
   # Budget configuration
+  budget_name     = var.budget_name
   budget_amount   = var.budget_amount
   currency_code   = var.currency_code
   calendar_period = var.calendar_period

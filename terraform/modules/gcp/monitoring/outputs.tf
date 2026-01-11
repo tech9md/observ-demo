@@ -29,14 +29,14 @@ output "pagerduty_notification_channel_id" {
 output "alert_policy_ids" {
   description = "Map of alert policy names to IDs"
   value = {
-    gke_cluster_health  = var.enable_gke_alerts ? google_monitoring_alert_policy.gke_cluster_health.id : null
-    pod_crash_loop      = var.enable_pod_alerts ? google_monitoring_alert_policy.pod_crash_loop.id : null
-    high_error_rate     = var.enable_error_alerts ? google_monitoring_alert_policy.high_error_rate.id : null
-    high_cpu            = var.enable_resource_alerts ? google_monitoring_alert_policy.high_cpu.id : null
-    high_memory         = var.enable_resource_alerts ? google_monitoring_alert_policy.high_memory.id : null
-    deployment_failure  = var.enable_deployment_alerts ? google_monitoring_alert_policy.deployment_failure.id : null
-    lb_errors           = var.enable_lb_alerts ? google_monitoring_alert_policy.lb_errors.id : null
-    uptime_alert        = var.create_uptime_checks ? google_monitoring_alert_policy.uptime_alert[0].id : null
+    gke_cluster_health = var.enable_gke_alerts ? google_monitoring_alert_policy.gke_cluster_health.id : null
+    pod_crash_loop     = var.enable_pod_alerts ? google_monitoring_alert_policy.pod_crash_loop.id : null
+    high_error_rate    = var.enable_error_alerts ? google_monitoring_alert_policy.high_error_rate.id : null
+    high_cpu           = var.enable_resource_alerts ? google_monitoring_alert_policy.high_cpu.id : null
+    high_memory        = var.enable_resource_alerts ? google_monitoring_alert_policy.high_memory.id : null
+    deployment_failure = var.enable_deployment_alerts ? google_monitoring_alert_policy.deployment_failure.id : null
+    lb_errors          = var.enable_lb_alerts ? google_monitoring_alert_policy.lb_errors.id : null
+    uptime_alert       = var.create_uptime_checks ? google_monitoring_alert_policy.uptime_alert[0].id : null
   }
 }
 
@@ -51,7 +51,7 @@ output "dashboard_ids" {
 output "dashboard_urls" {
   description = "URLs to view dashboards in Cloud Console"
   value = {
-    overview = "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.overview.id)[1]}?project=${var.project_id}"
+    overview    = "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.overview.id)[1]}?project=${var.project_id}"
     gke_metrics = var.create_gke_dashboard ? "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.gke_metrics[0].id)[1]}?project=${var.project_id}" : null
   }
 }
@@ -65,8 +65,8 @@ output "monitoring_summary" {
   description = "Summary of monitoring configuration"
   value = {
     notification_channels = {
-      email_count      = length(var.notification_emails)
-      slack_configured = var.slack_webhook_url != ""
+      email_count          = length(var.notification_emails)
+      slack_configured     = var.slack_webhook_url != ""
       pagerduty_configured = var.pagerduty_service_key != ""
     }
     alert_policies = {
@@ -102,11 +102,11 @@ output "alert_thresholds" {
 output "monitoring_links" {
   description = "Useful monitoring console links"
   value = {
-    metrics_explorer  = "https://console.cloud.google.com/monitoring/metrics-explorer?project=${var.project_id}"
-    alert_policies    = "https://console.cloud.google.com/monitoring/alerting/policies?project=${var.project_id}"
-    uptime_checks     = "https://console.cloud.google.com/monitoring/uptime?project=${var.project_id}"
-    dashboards        = "https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}"
-    logs_explorer     = "https://console.cloud.google.com/logs/query?project=${var.project_id}"
-    trace_list        = "https://console.cloud.google.com/traces/list?project=${var.project_id}"
+    metrics_explorer = "https://console.cloud.google.com/monitoring/metrics-explorer?project=${var.project_id}"
+    alert_policies   = "https://console.cloud.google.com/monitoring/alerting/policies?project=${var.project_id}"
+    uptime_checks    = "https://console.cloud.google.com/monitoring/uptime?project=${var.project_id}"
+    dashboards       = "https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}"
+    logs_explorer    = "https://console.cloud.google.com/logs/query?project=${var.project_id}"
+    trace_list       = "https://console.cloud.google.com/traces/list?project=${var.project_id}"
   }
 }
