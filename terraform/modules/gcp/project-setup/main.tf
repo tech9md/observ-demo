@@ -106,10 +106,7 @@ resource "google_storage_bucket" "terraform_state" {
   # Enable uniform bucket-level access
   uniform_bucket_level_access = true
 
-  # Encryption configuration
-  encryption {
-    default_kms_key_name = null # Use Google-managed encryption
-  }
+  # Note: Google-managed encryption is used by default when no encryption block is specified
 
   # Labels for organization
   labels = {

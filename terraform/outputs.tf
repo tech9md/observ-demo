@@ -92,12 +92,12 @@ output "cluster_location" {
 
 output "cluster_type" {
   description = "GKE cluster type (regional or zonal)"
-  value       = module.gke_cluster.cluster_type
+  value       = var.regional_cluster ? "regional" : "zonal"
 }
 
 output "cluster_version" {
   description = "GKE cluster Kubernetes version"
-  value       = module.gke_cluster.cluster_version
+  value       = module.gke_cluster.cluster_master_version
 }
 
 output "workload_identity_pool" {
@@ -170,6 +170,7 @@ output "monitoring_enabled" {
 
 output "notification_channels" {
   description = "Configured notification channels"
+  sensitive   = true
   value = {
     email     = var.notification_email != "" ? "configured" : "not configured"
     slack     = var.notification_slack != "" ? "configured" : "not configured"
@@ -177,14 +178,14 @@ output "notification_channels" {
   }
 }
 
-output "alert_policies_count" {
-  description = "Number of alert policies created"
-  value       = module.monitoring.alert_policies_count
+output "alert_policies" {
+  description = "Alert policies created"
+  value       = module.monitoring.alert_policy_ids
 }
 
 output "dashboards_created" {
-  description = "List of created dashboards"
-  value       = module.monitoring.dashboard_names
+  description = "IDs of created dashboards"
+  value       = module.monitoring.dashboard_ids
 }
 
 # =============================================================================
@@ -243,8 +244,8 @@ output "deployment_summary" {
     region             = var.region
     environment        = var.environment
     cluster_name       = module.gke_cluster.cluster_name
-    cluster_type       = module.gke_cluster.cluster_type
-    cluster_version    = module.gke_cluster.cluster_version
+    cluster_type       = var.regional_cluster ? "regional" : "zonal"
+    cluster_version    = module.gke_cluster.cluster_master_version
     network_name       = module.vpc_network.network_name
     iap_enabled        = var.enable_iap
     monitoring_enabled = true
@@ -281,7 +282,7 @@ output "next_steps" {
        observ-demo generate-traffic --pattern medium
 
     6. View monitoring dashboards:
-       ${module.monitoring.dashboard_names != [] ? "Dashboards created: ${join(", ", module.monitoring.dashboard_names)}" : "Create dashboards via observ-demo CLI"}
+       Visit: https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}
 
     7. Access Cloud Console:
        GKE:        ${module.vpc_network.network_summary.network_name != "" ? "https://console.cloud.google.com/kubernetes/clusters/details/${var.region}/${module.gke_cluster.cluster_name}?project=${var.project_id}" : "Not available"}
