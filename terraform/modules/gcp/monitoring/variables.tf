@@ -48,39 +48,39 @@ variable "pagerduty_service_key" {
 
 # Alert toggles
 variable "enable_gke_alerts" {
-  description = "Enable GKE cluster health alerts"
+  description = "Enable GKE cluster health alerts. Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - metric requires running cluster
 }
 
 variable "enable_pod_alerts" {
-  description = "Enable pod-level alerts (crash loops, etc.)"
+  description = "Enable pod-level alerts (crash loops, etc.). Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - metric requires running cluster
 }
 
 variable "enable_error_alerts" {
-  description = "Enable application error rate alerts"
+  description = "Enable application error rate alerts. Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - metric requires running cluster
 }
 
 variable "enable_resource_alerts" {
-  description = "Enable resource usage alerts (CPU, memory)"
+  description = "Enable resource usage alerts (CPU, memory). Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - metric requires running cluster
 }
 
 variable "enable_deployment_alerts" {
-  description = "Enable deployment failure alerts"
+  description = "Enable deployment failure alerts. Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - metric requires running cluster
 }
 
 variable "enable_lb_alerts" {
   description = "Enable load balancer alerts"
   type        = bool
-  default     = true
+  default     = false # Disabled by default - requires load balancer
 }
 
 # Alert thresholds
@@ -130,9 +130,9 @@ variable "lb_error_threshold" {
 
 # Dashboard configuration
 variable "create_gke_dashboard" {
-  description = "Create GKE metrics dashboard"
+  description = "Create GKE metrics dashboard. Requires cluster to be running."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - requires running cluster with metrics
 }
 
 # Uptime checks

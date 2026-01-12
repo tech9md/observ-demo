@@ -70,7 +70,7 @@ locals {
   )
 }
 
-# Alert Policy: GKE Cluster Health
+# Alert Policy: GKE Cluster Health (based on node allocatable resources)
 resource "google_monitoring_alert_policy" "gke_cluster_health" {
   project      = var.project_id
   display_name = "GKE Cluster Health Check"
@@ -78,17 +78,19 @@ resource "google_monitoring_alert_policy" "gke_cluster_health" {
   enabled      = var.enable_gke_alerts
 
   conditions {
-    display_name = "GKE Cluster Status"
+    display_name = "GKE Node Allocatable CPU"
 
     condition_threshold {
-      filter          = "resource.type = \"k8s_cluster\" AND metric.type = \"kubernetes.io/cluster/status\""
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
+      # Use node allocatable cores as a proxy for cluster health
+      filter          = "resource.type = \"k8s_node\" AND metric.type = \"kubernetes.io/node/cpu/allocatable_cores\""
+      comparison      = "COMPARISON_LT"
+      threshold_value = 0.1 # Alert if allocatable cores drops to near zero
       duration        = "300s"
 
       aggregations {
-        alignment_period   = "60s"
-        per_series_aligner = "ALIGN_MAX"
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_MEAN"
+        cross_series_reducer = "REDUCE_SUM"
       }
     }
   }
@@ -100,7 +102,7 @@ resource "google_monitoring_alert_policy" "gke_cluster_health" {
   }
 
   documentation {
-    content   = "GKE cluster health check failed. Check cluster status in GCP Console."
+    content   = "GKE cluster health check failed. Node allocatable resources are low. Check cluster status in GCP Console."
     mime_type = "text/markdown"
   }
 }
@@ -160,7 +162,7 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
     display_name = "Error Log Rate"
 
     condition_threshold {
-      filter          = "resource.type = \"k8s_container\" AND metric.type = \"logging.googleapis.com/log_entry_count\" AND severity >= \"ERROR\""
+      filter          = "resource.type = \"k8s_container\" AND metric.type = \"logging.googleapis.com/log_entry_count\" AND metric.labels.severity = \"ERROR\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.error_rate_threshold
       duration        = "300s"
@@ -254,7 +256,7 @@ resource "google_monitoring_alert_policy" "high_memory" {
   }
 }
 
-# Alert Policy: Deployment Failures
+# Alert Policy: Deployment Failures (using container restart count as proxy)
 resource "google_monitoring_alert_policy" "deployment_failure" {
   project      = var.project_id
   display_name = "Deployment Failure Detected"
@@ -262,17 +264,20 @@ resource "google_monitoring_alert_policy" "deployment_failure" {
   enabled      = var.enable_deployment_alerts
 
   conditions {
-    display_name = "Failed Deployments"
+    display_name = "Container Restart Rate"
 
     condition_threshold {
-      filter          = "resource.type = \"k8s_deployment\" AND metric.type = \"kubernetes.io/deployment/replicas_unavailable\""
+      # Use container restart count as a proxy for deployment issues
+      filter          = "resource.type = \"k8s_container\" AND metric.type = \"kubernetes.io/container/restart_count\""
       comparison      = "COMPARISON_GT"
-      threshold_value = 0
+      threshold_value = 5 # More than 5 restarts in the period indicates issues
       duration        = "300s"
 
       aggregations {
-        alignment_period   = "60s"
-        per_series_aligner = "ALIGN_MAX"
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_DELTA"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.labels.namespace_name", "resource.labels.pod_name"]
       }
     }
   }
@@ -284,7 +289,7 @@ resource "google_monitoring_alert_policy" "deployment_failure" {
   }
 
   documentation {
-    content   = "Deployment has unavailable replicas. Check deployment status and pod events."
+    content   = "High container restart rate detected, indicating potential deployment issues. Check deployment status and pod events."
     mime_type = "text/markdown"
   }
 }

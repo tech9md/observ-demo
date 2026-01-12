@@ -13,7 +13,7 @@
             "dataSets": [{
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "resource.type=\"k8s_pod\" resource.cluster_name=\"${cluster_name}\"",
+                  "filter": "resource.type=\"k8s_pod\" AND resource.labels.cluster_name=\"${cluster_name}\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
                     "perSeriesAligner": "ALIGN_MEAN",

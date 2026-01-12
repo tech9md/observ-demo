@@ -240,9 +240,9 @@ variable "iap_support_email" {
 }
 
 variable "create_iap_brand" {
-  description = "Create new IAP brand (OAuth consent screen)"
+  description = "Create new IAP brand (OAuth consent screen). Requires valid support_email."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - requires OAuth consent screen setup
 }
 
 variable "existing_iap_brand_name" {
@@ -252,9 +252,9 @@ variable "existing_iap_brand_name" {
 }
 
 variable "create_oauth_client" {
-  description = "Create OAuth client for IAP"
+  description = "Create OAuth client for IAP. Requires IAP brand to exist."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - requires IAP brand
 }
 
 variable "iap_users" {

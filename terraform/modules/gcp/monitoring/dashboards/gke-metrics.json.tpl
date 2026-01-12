@@ -12,7 +12,7 @@
             "dataSets": [{
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "resource.type=\"k8s_container\" resource.cluster_name=\"${cluster_name}\" metric.type=\"kubernetes.io/container/cpu/core_usage_time\"",
+                  "filter": "resource.type=\"k8s_container\" AND resource.labels.cluster_name=\"${cluster_name}\" AND metric.type=\"kubernetes.io/container/cpu/core_usage_time\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
                     "perSeriesAligner": "ALIGN_RATE"
@@ -33,7 +33,7 @@
             "dataSets": [{
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "resource.type=\"k8s_container\" resource.cluster_name=\"${cluster_name}\" metric.type=\"kubernetes.io/container/memory/used_bytes\"",
+                  "filter": "resource.type=\"k8s_container\" AND resource.labels.cluster_name=\"${cluster_name}\" AND metric.type=\"kubernetes.io/container/memory/used_bytes\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
                     "perSeriesAligner": "ALIGN_MEAN"
