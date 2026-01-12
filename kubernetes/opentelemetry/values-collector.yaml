@@ -6,6 +6,10 @@
 # - Open-source observability backends
 # OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
+# Image configuration (required in newer chart versions)
+image:
+  repository: otel/opentelemetry-collector-contrib
+
 # Deployment mode
 mode: deployment
 
