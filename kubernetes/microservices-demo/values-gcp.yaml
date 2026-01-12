@@ -1,5 +1,6 @@
 # Google Microservices Demo (Online Boutique) - GCP Configuration
 # Helm values override for deploying to GKE with OpenTelemetry integration
+# OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
 # Service account with Workload Identity
 serviceAccount:
@@ -22,10 +23,10 @@ opentelemetry:
     cloud.provider: "gcp"
     cloud.platform: "gcp_kubernetes_engine"
 
-# Frontend service
+# Frontend service - reduced to 1 replica for demo
 frontend:
   enabled: true
-  replicas: 2
+  replicas: 1
 
   image:
     repository: gcr.io/google-samples/microservices-demo/frontend
@@ -34,11 +35,11 @@ frontend:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: PORT
@@ -82,11 +83,11 @@ cartService:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: REDIS_ADDR
@@ -107,11 +108,11 @@ productCatalogService:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: PORT
@@ -132,11 +133,11 @@ currencyService:
 
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
   env:
     - name: PORT
@@ -157,11 +158,11 @@ paymentService:
 
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
   env:
     - name: PORT
@@ -182,11 +183,11 @@ shippingService:
 
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
   env:
     - name: PORT
@@ -207,11 +208,11 @@ emailService:
 
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
   env:
     - name: PORT
@@ -232,11 +233,11 @@ checkoutService:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: PORT
@@ -269,11 +270,11 @@ recommendationService:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: PORT
@@ -296,11 +297,11 @@ adService:
 
   resources:
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: PORT
@@ -318,11 +319,11 @@ redis:
 
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
   persistence:
     enabled: false  # For demo purposes, no persistence needed
@@ -338,11 +339,11 @@ loadGenerator:
 
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 128Mi
     requests:
-      cpu: 300m
-      memory: 256Mi
+      cpu: 25m
+      memory: 64Mi
 
   env:
     - name: FRONTEND_ADDR
@@ -372,12 +373,12 @@ ingress:
               port:
                 number: 80
 
-# Autoscaling
+# Autoscaling - disabled for demo to save resources
 autoscaling:
-  enabled: true
+  enabled: false
   minReplicas: 1
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 70
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
 
 # Network Policies
 networkPolicy:

@@ -2,6 +2,7 @@
 # Includes: Prometheus, Alertmanager, Grafana, and exporters
 # Using kube-prometheus-stack Helm chart
 # Configured for GKE Autopilot compatibility
+# OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
 # Global configuration
 global:
@@ -20,11 +21,11 @@ prometheusOperator:
     enabled: false
   resources:
     requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
       cpu: 100m
       memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
 
 # Prometheus Server
 prometheus:
@@ -36,27 +37,27 @@ prometheus:
 
   # Prometheus Server Configuration
   prometheusSpec:
-    # Retention
-    retention: 7d
-    retentionSize: "10GB"
+    # Retention - reduced for demo (3 days is enough for testing)
+    retention: 3d
+    retentionSize: "3GB"
 
-    # Resource limits
+    # Resource limits - minimal for demo
     resources:
       requests:
-        cpu: 500m
-        memory: 2Gi
+        cpu: 100m
+        memory: 256Mi
       limits:
-        cpu: 1000m
-        memory: 4Gi
+        cpu: 300m
+        memory: 512Mi
 
-    # Storage
+    # Storage - reduced from 20Gi to 5Gi for demo
     storageSpec:
       volumeClaimTemplate:
         spec:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 20Gi
+              storage: 5Gi
 
     # Service Monitor Selector - discover all service monitors
     serviceMonitorSelectorNilUsesHelmValues: false
@@ -136,26 +137,27 @@ prometheus:
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
 
-# Alertmanager
+# Alertmanager - minimal for demo
 alertmanager:
   enabled: true
 
   alertmanagerSpec:
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
+        cpu: 10m
+        memory: 32Mi
       limits:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 50m
+        memory: 64Mi
 
+    # Storage - reduced from 2Gi to 1Gi for demo
     storage:
       volumeClaimTemplate:
         spec:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 2Gi
+              storage: 1Gi
 
 # Grafana - Disabled (we'll deploy separately for custom configuration)
 grafana:
@@ -176,13 +178,14 @@ kube-state-metrics:
   # Disable the problematic node affinity for EKS
   nodeSelector: {}
   affinity: {}
+  # Minimal resources for demo
   resources:
     requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
       cpu: 100m
       memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
 
 # Kubelet service - DISABLED for GKE Autopilot
 # (cannot access kube-system resources)

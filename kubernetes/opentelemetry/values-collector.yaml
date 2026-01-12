@@ -4,6 +4,7 @@
 # - Jaeger (distributed tracing)
 # - Prometheus (metrics)
 # - Open-source observability backends
+# OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
 # Deployment mode
 mode: deployment
@@ -13,17 +14,17 @@ serviceAccount:
   create: true
   name: otel-collector-sa
 
-# Collector replicas for high availability
-replicaCount: 2
+# Single replica for demo (reduce from 2 to 1)
+replicaCount: 1
 
-# Resource limits - optimized for cost
+# Resource limits - minimal for demo
 resources:
   limits:
-    cpu: 500m
-    memory: 1Gi
-  requests:
     cpu: 200m
-    memory: 512Mi
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
 
 # OpenTelemetry Collector Configuration
 config:
@@ -254,13 +255,13 @@ securityContext:
     drop:
       - ALL
 
-# Horizontal Pod Autoscaling
+# Horizontal Pod Autoscaling - disabled for demo to save resources
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 70
-  targetMemoryUtilizationPercentage: 80
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 85
 
 # Pod Disruption Budget
 podDisruptionBudget:
@@ -331,7 +332,7 @@ env:
   - name: GOGC
     value: "80"  # More aggressive garbage collection
   - name: GOMEMLIMIT
-    value: "768MiB"  # Memory limit for Go runtime
+    value: "200MiB"  # Memory limit for Go runtime (reduced for demo)
 
 # Affinity rules for better distribution
 affinity:

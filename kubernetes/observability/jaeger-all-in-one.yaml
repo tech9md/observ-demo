@@ -1,6 +1,7 @@
 # Jaeger All-in-One - Distributed Tracing Backend
 # Includes: Collector, Query Service, and UI
 # Suitable for demo/learning environments (not for production)
+# OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
 ---
 apiVersion: v1
@@ -48,9 +49,9 @@ spec:
       - name: jaeger
         image: jaegertracing/all-in-one:1.53
         args:
-          - "--memory.max-traces=10000"
+          - "--memory.max-traces=5000"
           - "--query.base-path=/jaeger"
-          - "--log-level=info"
+          - "--log-level=warn"
         env:
           - name: COLLECTOR_OTLP_ENABLED
             value: "true"
@@ -91,11 +92,11 @@ spec:
             protocol: TCP
         resources:
           requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
             cpu: 200m
             memory: 512Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
         livenessProbe:
           httpGet:
             path: /
