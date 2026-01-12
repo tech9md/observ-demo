@@ -75,45 +75,13 @@ resource "google_container_cluster" "autopilot" {
     }
   }
 
-  # Cluster addons (limited options available for Autopilot)
-  # Note: network_policy_config, dns_cache_config, and gcp_filestore_csi_driver_config
-  # are not compatible with GKE Autopilot as they are managed automatically
-  addons_config {
-    # HTTP load balancing for Ingress
-    http_load_balancing {
-      disabled = false
-    }
+  # Note: For Autopilot, most configurations are managed automatically
+  # Explicitly setting addons_config can cause "invalid argument" errors
+  # Binary authorization, VPA, security posture are also managed by Autopilot
 
-    # Horizontal Pod Autoscaling
-    horizontal_pod_autoscaling {
-      disabled = false
-    }
-
-    # GCE Persistent Disk CSI driver (supported in Autopilot)
-    gce_persistent_disk_csi_driver_config {
-      enabled = true
-    }
-  }
-
-  # Binary Authorization (optional, for enhanced security)
-  dynamic "binary_authorization" {
-    for_each = var.enable_binary_authorization ? [1] : []
-    content {
-      evaluation_mode = "PROJECT_SINGLETON_POLICY_ENFORCE"
-    }
-  }
-
-  # Note: network_policy block is not compatible with GKE Autopilot
-  # Autopilot clusters automatically manage network policies
-
-  # Vertical Pod Autoscaling
-  vertical_pod_autoscaling {
-    enabled = var.enable_vertical_pod_autoscaling
-  }
-
-  # Monitoring and logging configuration
+  # Monitoring and logging - use SYSTEM_COMPONENTS only for Autopilot compatibility
   monitoring_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+    enable_components = ["SYSTEM_COMPONENTS"]
 
     managed_prometheus {
       enabled = var.enable_managed_prometheus
@@ -121,13 +89,7 @@ resource "google_container_cluster" "autopilot" {
   }
 
   logging_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
-  }
-
-  # Security posture and vulnerability scanning
-  security_posture_config {
-    mode               = var.enable_security_posture ? "BASIC" : "DISABLED"
-    vulnerability_mode = var.enable_security_posture ? "VULNERABILITY_BASIC" : "VULNERABILITY_DISABLED"
+    enable_components = ["SYSTEM_COMPONENTS"]
   }
 
   # Resource labels
@@ -169,21 +131,27 @@ resource "google_container_cluster" "autopilot" {
 }
 
 # Workload Identity binding for OpenTelemetry collector
+# Note: depends_on cluster because the identity pool is created with the cluster
 resource "google_service_account_iam_member" "otel_workload_identity" {
-  count = var.create_workload_identity_bindings ? 1 : 0
+  count = var.create_workload_identity_bindings && var.otel_service_account_email != "" ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.otel_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.otel_namespace}/${var.otel_service_account_name}]"
+
+  depends_on = [google_container_cluster.autopilot]
 }
 
 # Workload Identity binding for microservices demo
+# Note: depends_on cluster because the identity pool is created with the cluster
 resource "google_service_account_iam_member" "microservices_workload_identity" {
-  count = var.create_workload_identity_bindings ? 1 : 0
+  count = var.create_workload_identity_bindings && var.microservices_service_account_email != "" ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.microservices_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.microservices_namespace}/${var.microservices_service_account_name}]"
+
+  depends_on = [google_container_cluster.autopilot]
 }
 
 # Cloud DNS managed zone for GKE (optional, for custom domains)
