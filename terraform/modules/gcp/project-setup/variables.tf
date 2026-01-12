@@ -22,13 +22,20 @@ variable "region" {
 }
 
 variable "state_bucket_name" {
-  description = "Name of the GCS bucket for Terraform state"
+  description = "Name of the GCS bucket for Terraform state (leave empty to skip bucket creation)"
   type        = string
+  default     = ""
 
   validation {
-    condition     = can(regex("^[a-z0-9][a-z0-9-_.]{1,61}[a-z0-9]$", var.state_bucket_name))
-    error_message = "Bucket name must be 3-63 characters, start and end with a lowercase letter or number, and contain only lowercase letters, numbers, hyphens, underscores, and periods."
+    condition     = var.state_bucket_name == "" || can(regex("^[a-z0-9][a-z0-9-_.]{1,61}[a-z0-9]$", var.state_bucket_name))
+    error_message = "Bucket name must be empty (to skip creation) or 3-63 characters, start and end with a lowercase letter or number."
   }
+}
+
+variable "create_state_bucket" {
+  description = "Create a new GCS bucket for Terraform state (set to false if using existing bucket)"
+  type        = bool
+  default     = true
 }
 
 variable "state_prefix" {
@@ -44,13 +51,13 @@ variable "enable_versioning" {
 }
 
 variable "environment" {
-  description = "Environment name (dev, staging, prod)"
+  description = "Environment name (dev, staging, prod, demo)"
   type        = string
   default     = "dev"
 
   validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be one of: dev, staging, prod."
+    condition     = contains(["dev", "staging", "prod", "demo"], var.environment)
+    error_message = "Environment must be one of: dev, staging, prod, demo."
   }
 }
 

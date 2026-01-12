@@ -82,8 +82,10 @@ resource "google_project_iam_member" "terraform_roles" {
   depends_on = [google_service_account.terraform]
 }
 
-# Create GCS bucket for Terraform state
+# Create GCS bucket for Terraform state (optional - skip if using existing bucket)
 resource "google_storage_bucket" "terraform_state" {
+  count = var.create_state_bucket && var.state_bucket_name != "" ? 1 : 0
+
   project  = var.project_id
   name     = var.state_bucket_name
   location = var.region
@@ -121,9 +123,11 @@ resource "google_storage_bucket" "terraform_state" {
   depends_on = [google_project_service.required_apis]
 }
 
-# Grant Terraform SA access to state bucket
+# Grant Terraform SA access to state bucket (only if bucket is created)
 resource "google_storage_bucket_iam_member" "terraform_state_admin" {
-  bucket = google_storage_bucket.terraform_state.name
+  count = var.create_state_bucket && var.state_bucket_name != "" ? 1 : 0
+
+  bucket = google_storage_bucket.terraform_state[0].name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.terraform.email}"
 
@@ -133,9 +137,11 @@ resource "google_storage_bucket_iam_member" "terraform_state_admin" {
   ]
 }
 
-# Enable object versioning for state files
+# Create state directory marker (only if bucket is created)
 resource "google_storage_bucket_object" "state_directory" {
-  bucket  = google_storage_bucket.terraform_state.name
+  count = var.create_state_bucket && var.state_bucket_name != "" ? 1 : 0
+
+  bucket  = google_storage_bucket.terraform_state[0].name
   name    = "${var.state_prefix}/.keep"
   content = "Terraform state directory"
 

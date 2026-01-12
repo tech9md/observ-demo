@@ -27,17 +27,17 @@ output "terraform_service_account_name" {
 
 output "state_bucket_name" {
   description = "Name of the GCS bucket for Terraform state"
-  value       = google_storage_bucket.terraform_state.name
+  value       = var.create_state_bucket && var.state_bucket_name != "" ? google_storage_bucket.terraform_state[0].name : var.state_bucket_name
 }
 
 output "state_bucket_url" {
   description = "URL of the Terraform state bucket"
-  value       = google_storage_bucket.terraform_state.url
+  value       = var.create_state_bucket && var.state_bucket_name != "" ? google_storage_bucket.terraform_state[0].url : null
 }
 
 output "state_bucket_self_link" {
   description = "Self-link of the Terraform state bucket"
-  value       = google_storage_bucket.terraform_state.self_link
+  value       = var.create_state_bucket && var.state_bucket_name != "" ? google_storage_bucket.terraform_state[0].self_link : null
 }
 
 output "otel_service_account_email" {

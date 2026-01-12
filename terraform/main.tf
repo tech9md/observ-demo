@@ -79,6 +79,9 @@ module "project_setup" {
   state_bucket_name = var.state_bucket_name
   environment       = var.environment
 
+  # Skip bucket creation when state_bucket_name is empty (using existing bucket)
+  create_state_bucket = var.state_bucket_name != ""
+
   # Enable workload identity service accounts
   create_workload_identities = true
 
