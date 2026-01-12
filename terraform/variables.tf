@@ -523,6 +523,12 @@ variable "budget_threshold_rules" {
   ]
 }
 
+variable "enable_budget_alerts" {
+  description = "Enable budget alerts module. Requires valid billing_account."
+  type        = bool
+  default     = false # Disabled by default - requires valid billing account
+}
+
 variable "create_budget_subscription" {
   description = "Create Pub/Sub subscription for budget alerts"
   type        = bool
@@ -538,7 +544,7 @@ variable "create_budget_alert_function" {
 variable "create_budget_monitoring_alert" {
   description = "Create Cloud Monitoring alert for budget exceeded"
   type        = bool
-  default     = true
+  default     = false # Disabled by default - billing metrics may not be available
 }
 
 variable "budget_alert_threshold" {

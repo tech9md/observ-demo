@@ -10,8 +10,8 @@ variable "billing_account" {
   type        = string
 
   validation {
-    condition     = can(regex("^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$", var.billing_account))
-    error_message = "Billing account must be in format: 012345-6789AB-CDEF01."
+    condition     = can(regex("^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}$", var.billing_account))
+    error_message = "Billing account must be in format: XXXXXX-XXXXXX-XXXXXX (uppercase letters and numbers)."
   }
 }
 
@@ -148,7 +148,7 @@ variable "disable_default_iam_recipients" {
 variable "create_pubsub_subscription" {
   description = "Create Pub/Sub subscription for programmatic access"
   type        = bool
-  default     = true
+  default     = false # Disabled by default - enable for programmatic budget alert handling
 }
 
 # Cloud Function
@@ -160,9 +160,9 @@ variable "create_alert_function" {
 
 # Monitoring integration
 variable "create_monitoring_alert" {
-  description = "Create Cloud Monitoring alert for budget exceeded"
+  description = "Create Cloud Monitoring alert for budget exceeded. Requires billing metrics to be available."
   type        = bool
-  default     = true
+  default     = false # Disabled by default - billing metrics may not be immediately available
 }
 
 variable "create_cost_metric" {

@@ -249,9 +249,10 @@ module "monitoring" {
   depends_on = [module.gke_cluster]
 }
 
-# Phase 6: Budget Alerts - Cost Monitoring
+# Phase 6: Budget Alerts - Cost Monitoring (Optional)
 module "budget_alerts" {
   source = "./modules/gcp/budget-alerts"
+  count  = var.enable_budget_alerts ? 1 : 0
 
   project_id      = var.project_id
   billing_account = var.billing_account

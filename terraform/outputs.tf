@@ -192,6 +192,11 @@ output "dashboards_created" {
 # BUDGET & COST OUTPUTS
 # =============================================================================
 
+output "budget_enabled" {
+  description = "Whether budget alerts are enabled"
+  value       = var.enable_budget_alerts
+}
+
 output "budget_amount" {
   description = "Monthly budget amount"
   value       = "${var.currency_code} ${var.budget_amount}"
@@ -199,17 +204,17 @@ output "budget_amount" {
 
 output "budget_name" {
   description = "Budget name"
-  value       = module.budget_alerts.budget_name
+  value       = var.enable_budget_alerts ? module.budget_alerts[0].budget_name : null
 }
 
 output "budget_thresholds" {
   description = "Configured budget alert thresholds"
-  value       = module.budget_alerts.threshold_rules
+  value       = var.enable_budget_alerts ? module.budget_alerts[0].threshold_rules : null
 }
 
 output "cost_pubsub_topic" {
   description = "Pub/Sub topic for budget alerts"
-  value       = module.budget_alerts.pubsub_topic_name
+  value       = var.enable_budget_alerts ? module.budget_alerts[0].pubsub_topic_name : null
 }
 
 # =============================================================================
@@ -306,12 +311,15 @@ output "next_steps" {
 
 output "console_links" {
   description = "Quick links to GCP Console"
-  value       = module.budget_alerts.budget_links
+  value       = var.enable_budget_alerts ? module.budget_alerts[0].budget_links : {
+    budget_overview = "https://console.cloud.google.com/billing?project=${var.project_id}"
+    cost_breakdown  = "https://console.cloud.google.com/billing/linkedaccount?project=${var.project_id}"
+  }
 }
 
 output "cost_optimization_tips" {
   description = "Cost optimization recommendations"
-  value       = module.budget_alerts.cost_optimization_tips
+  value       = var.enable_budget_alerts ? module.budget_alerts[0].cost_optimization_tips : "Enable budget_alerts to see cost optimization tips."
 }
 
 # =============================================================================
