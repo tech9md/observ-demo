@@ -29,13 +29,13 @@ output "pagerduty_notification_channel_id" {
 output "alert_policy_ids" {
   description = "Map of alert policy names to IDs"
   value = {
-    gke_cluster_health = var.enable_gke_alerts ? google_monitoring_alert_policy.gke_cluster_health.id : null
-    pod_crash_loop     = var.enable_pod_alerts ? google_monitoring_alert_policy.pod_crash_loop.id : null
-    high_error_rate    = var.enable_error_alerts ? google_monitoring_alert_policy.high_error_rate.id : null
-    high_cpu           = var.enable_resource_alerts ? google_monitoring_alert_policy.high_cpu.id : null
-    high_memory        = var.enable_resource_alerts ? google_monitoring_alert_policy.high_memory.id : null
-    deployment_failure = var.enable_deployment_alerts ? google_monitoring_alert_policy.deployment_failure.id : null
-    lb_errors          = var.enable_lb_alerts ? google_monitoring_alert_policy.lb_errors.id : null
+    gke_cluster_health = var.enable_gke_alerts ? google_monitoring_alert_policy.gke_cluster_health[0].id : null
+    pod_crash_loop     = var.enable_pod_alerts ? google_monitoring_alert_policy.pod_crash_loop[0].id : null
+    high_error_rate    = var.enable_error_alerts ? google_monitoring_alert_policy.high_error_rate[0].id : null
+    high_cpu           = var.enable_resource_alerts ? google_monitoring_alert_policy.high_cpu[0].id : null
+    high_memory        = var.enable_resource_alerts ? google_monitoring_alert_policy.high_memory[0].id : null
+    deployment_failure = var.enable_deployment_alerts ? google_monitoring_alert_policy.deployment_failure[0].id : null
+    lb_errors          = var.enable_lb_alerts ? google_monitoring_alert_policy.lb_errors[0].id : null
     uptime_alert       = var.create_uptime_checks ? google_monitoring_alert_policy.uptime_alert[0].id : null
   }
 }

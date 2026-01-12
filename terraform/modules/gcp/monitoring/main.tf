@@ -72,10 +72,12 @@ locals {
 
 # Alert Policy: GKE Cluster Health (based on node allocatable resources)
 resource "google_monitoring_alert_policy" "gke_cluster_health" {
+  count = var.enable_gke_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "GKE Cluster Health Check"
   combiner     = "OR"
-  enabled      = var.enable_gke_alerts
+  enabled      = true
 
   conditions {
     display_name = "GKE Node Allocatable CPU"
@@ -109,10 +111,12 @@ resource "google_monitoring_alert_policy" "gke_cluster_health" {
 
 # Alert Policy: Pod Crash Loops
 resource "google_monitoring_alert_policy" "pod_crash_loop" {
+  count = var.enable_pod_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "Pod Crash Loop Detected"
   combiner     = "OR"
-  enabled      = var.enable_pod_alerts
+  enabled      = true
 
   conditions {
     display_name = "High Pod Restart Count"
@@ -153,10 +157,12 @@ resource "google_monitoring_alert_policy" "pod_crash_loop" {
 
 # Alert Policy: High Error Rate
 resource "google_monitoring_alert_policy" "high_error_rate" {
+  count = var.enable_error_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "High Application Error Rate"
   combiner     = "OR"
-  enabled      = var.enable_error_alerts
+  enabled      = true
 
   conditions {
     display_name = "Error Log Rate"
@@ -188,10 +194,12 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
 
 # Alert Policy: High CPU Usage
 resource "google_monitoring_alert_policy" "high_cpu" {
+  count = var.enable_resource_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "High CPU Usage"
   combiner     = "OR"
-  enabled      = var.enable_resource_alerts
+  enabled      = true
 
   conditions {
     display_name = "Container CPU Usage"
@@ -223,10 +231,12 @@ resource "google_monitoring_alert_policy" "high_cpu" {
 
 # Alert Policy: High Memory Usage
 resource "google_monitoring_alert_policy" "high_memory" {
+  count = var.enable_resource_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "High Memory Usage"
   combiner     = "OR"
-  enabled      = var.enable_resource_alerts
+  enabled      = true
 
   conditions {
     display_name = "Container Memory Usage"
@@ -258,10 +268,12 @@ resource "google_monitoring_alert_policy" "high_memory" {
 
 # Alert Policy: Deployment Failures (using container restart count as proxy)
 resource "google_monitoring_alert_policy" "deployment_failure" {
+  count = var.enable_deployment_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "Deployment Failure Detected"
   combiner     = "OR"
-  enabled      = var.enable_deployment_alerts
+  enabled      = true
 
   conditions {
     display_name = "Container Restart Rate"
@@ -296,10 +308,12 @@ resource "google_monitoring_alert_policy" "deployment_failure" {
 
 # Alert Policy: Load Balancer Errors
 resource "google_monitoring_alert_policy" "lb_errors" {
+  count = var.enable_lb_alerts ? 1 : 0
+
   project      = var.project_id
   display_name = "Load Balancer Error Rate"
   combiner     = "OR"
-  enabled      = var.enable_lb_alerts
+  enabled      = true
 
   conditions {
     display_name = "LB 5xx Errors"
