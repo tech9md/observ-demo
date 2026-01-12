@@ -42,7 +42,6 @@ env:
   TF_VERSION: '1.6.0'
   KUBECTL_VERSION: 'v1.28.0'
   HELM_VERSION: 'v3.13.0'
-  GKE_CLUSTER_NAME: 'observ-demo-cluster'
 
 jobs:
   # ============================================
@@ -109,10 +108,18 @@ jobs:
             terraform apply tfplan
           fi
 
+      - name: Get Cluster Name from Terraform
+        id: tf-outputs
+        working-directory: terraform
+        run: |
+          CLUSTER_NAME=$(terraform output -raw cluster_name)
+          echo "cluster_name=$CLUSTER_NAME" >> $GITHUB_OUTPUT
+          echo "Cluster name: $CLUSTER_NAME"
+
       # ---- Configure kubectl ----
       - name: Get GKE Credentials
         run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+          gcloud container clusters get-credentials ${{ steps.tf-outputs.outputs.cluster_name }} \
             --region ${{ github.event.inputs.region }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
@@ -211,7 +218,7 @@ jobs:
           echo "DEPLOYMENT COMPLETE"
           echo "============================================"
           echo ""
-          echo "Cluster: ${{ env.GKE_CLUSTER_NAME }}"
+          echo "Cluster: ${{ steps.tf-outputs.outputs.cluster_name }}"
           echo "Region: ${{ github.event.inputs.region }}"
           echo "Project: ${{ secrets.GCP_PROJECT_ID }}"
           echo ""
@@ -228,7 +235,7 @@ jobs:
           echo "Run these commands locally to access the stack:"
           echo ""
           echo "# Configure kubectl:"
-          echo "gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \\"
+          echo "gcloud container clusters get-credentials ${{ steps.tf-outputs.outputs.cluster_name }} \\"
           echo "  --region ${{ github.event.inputs.region }} \\"
           echo "  --project ${{ secrets.GCP_PROJECT_ID }}"
           echo ""
@@ -271,7 +278,8 @@ jobs:
 
       - name: Get GKE Credentials
         run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+          GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
             --region ${{ github.event.inputs.region }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
@@ -322,7 +330,8 @@ jobs:
 
       - name: Get GKE Credentials
         run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+          GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
             --region ${{ github.event.inputs.region }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
@@ -388,7 +397,8 @@ jobs:
       - name: Get GKE Credentials
         continue-on-error: true
         run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
+          GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
             --region ${{ github.event.inputs.region }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
