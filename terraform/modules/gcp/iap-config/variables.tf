@@ -31,12 +31,13 @@ variable "application_title" {
 }
 
 variable "support_email" {
-  description = "Support email for OAuth consent screen"
+  description = "Support email for OAuth consent screen (required when create_brand = true)"
   type        = string
+  default     = ""
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.support_email))
-    error_message = "Support email must be a valid email address."
+    condition     = var.support_email == "" || can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.support_email))
+    error_message = "Support email must be empty or a valid email address."
   }
 }
 
