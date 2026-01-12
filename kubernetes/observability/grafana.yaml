@@ -204,12 +204,15 @@ spec:
         - name: grafana-dashboards-config
           configMap:
             name: grafana-dashboards-config
+        # Dashboard ConfigMaps are optional - created separately after Grafana starts
         - name: grafana-dashboards-sre
           configMap:
             name: grafana-dashboards-sre
+            optional: true
         - name: grafana-dashboards-microservices
           configMap:
             name: grafana-dashboards-microservices
+            optional: true
 
 ---
 apiVersion: v1
