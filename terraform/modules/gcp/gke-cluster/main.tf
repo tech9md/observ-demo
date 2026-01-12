@@ -170,7 +170,7 @@ resource "google_container_cluster" "autopilot" {
 
 # Workload Identity binding for OpenTelemetry collector
 resource "google_service_account_iam_member" "otel_workload_identity" {
-  count = var.otel_service_account_email != null ? 1 : 0
+  count = var.create_workload_identity_bindings ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.otel_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"
@@ -179,7 +179,7 @@ resource "google_service_account_iam_member" "otel_workload_identity" {
 
 # Workload Identity binding for microservices demo
 resource "google_service_account_iam_member" "microservices_workload_identity" {
-  count = var.microservices_service_account_email != null ? 1 : 0
+  count = var.create_workload_identity_bindings ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.microservices_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"

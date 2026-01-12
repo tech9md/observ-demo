@@ -334,10 +334,10 @@ output "kubernetes_backend_config" {
 
 output "terraform_state_bucket" {
   description = "GCS bucket for Terraform state"
-  value       = module.project_setup.state_bucket_name
+  value       = module.project_setup.state_bucket_name != "" ? module.project_setup.state_bucket_name : "(using existing bucket configured in backend)"
 }
 
 output "terraform_state_location" {
   description = "Location of Terraform state"
-  value       = "gs://${module.project_setup.state_bucket_name}/terraform/state"
+  value       = module.project_setup.state_bucket_name != "" ? "gs://${module.project_setup.state_bucket_name}/terraform/state" : "(configured in backend block)"
 }

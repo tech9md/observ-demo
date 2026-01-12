@@ -157,10 +157,16 @@ variable "deletion_protection" {
 }
 
 # Workload Identity configuration
+variable "create_workload_identity_bindings" {
+  description = "Create Workload Identity bindings for service accounts (must be known at plan time)"
+  type        = bool
+  default     = true
+}
+
 variable "otel_service_account_email" {
   description = "Email of the GCP service account for OpenTelemetry collector"
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "otel_namespace" {
@@ -178,7 +184,7 @@ variable "otel_service_account_name" {
 variable "microservices_service_account_email" {
   description = "Email of the GCP service account for microservices demo"
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "microservices_namespace" {

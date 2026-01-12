@@ -142,10 +142,11 @@ module "gke_cluster" {
   enable_security_posture         = var.enable_security_posture
   deletion_protection             = var.deletion_protection
 
-  # Workload Identity bindings
-  otel_service_account_email = module.project_setup.otel_service_account_email
-  otel_namespace             = local.otel_namespace
-  otel_service_account_name  = "otel-collector-sa"
+  # Workload Identity bindings (use static boolean for count to avoid plan-time issues)
+  create_workload_identity_bindings = true
+  otel_service_account_email        = module.project_setup.otel_service_account_email
+  otel_namespace                    = local.otel_namespace
+  otel_service_account_name         = "otel-collector-sa"
 
   microservices_service_account_email = module.project_setup.microservices_service_account_email
   microservices_namespace             = local.microservices_namespace
