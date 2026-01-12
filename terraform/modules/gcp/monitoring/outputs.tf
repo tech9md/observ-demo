@@ -43,7 +43,7 @@ output "alert_policy_ids" {
 output "dashboard_ids" {
   description = "IDs of created dashboards"
   value = {
-    overview    = google_monitoring_dashboard.overview.id
+    overview    = var.create_gke_dashboard ? google_monitoring_dashboard.overview[0].id : null
     gke_metrics = var.create_gke_dashboard ? google_monitoring_dashboard.gke_metrics[0].id : null
   }
 }
@@ -51,7 +51,7 @@ output "dashboard_ids" {
 output "dashboard_urls" {
   description = "URLs to view dashboards in Cloud Console"
   value = {
-    overview    = "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.overview.id)[1]}?project=${var.project_id}"
+    overview    = var.create_gke_dashboard ? "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.overview[0].id)[1]}?project=${var.project_id}" : null
     gke_metrics = var.create_gke_dashboard ? "https://console.cloud.google.com/monitoring/dashboards/custom/${split("/", google_monitoring_dashboard.gke_metrics[0].id)[1]}?project=${var.project_id}" : null
   }
 }
@@ -78,7 +78,7 @@ output "monitoring_summary" {
       lb_alerts         = var.enable_lb_alerts
     }
     dashboards = {
-      overview_created    = true
+      overview_created    = var.create_gke_dashboard
       gke_metrics_created = var.create_gke_dashboard
     }
     uptime_checks = {

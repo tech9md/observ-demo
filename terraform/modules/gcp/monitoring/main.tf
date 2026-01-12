@@ -329,8 +329,10 @@ resource "google_monitoring_alert_policy" "lb_errors" {
   }
 }
 
-# Dashboard: Observability Demo Overview
+# Dashboard: Observability Demo Overview (requires running cluster)
 resource "google_monitoring_dashboard" "overview" {
+  count = var.create_gke_dashboard ? 1 : 0
+
   project = var.project_id
   dashboard_json = templatefile("${path.module}/dashboards/overview.json.tpl", {
     project_id   = var.project_id

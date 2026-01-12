@@ -378,39 +378,39 @@ variable "notification_pagerduty" {
 }
 
 variable "enable_cluster_health_alerts" {
-  description = "Enable GKE cluster health alerts"
+  description = "Enable GKE cluster health alerts (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_pod_alerts" {
-  description = "Enable pod-level alerts (crash loops, OOM, etc.)"
+  description = "Enable pod-level alerts (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_error_rate_alerts" {
-  description = "Enable error rate alerts"
+  description = "Enable error rate alerts (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_resource_alerts" {
-  description = "Enable resource usage alerts (CPU, memory)"
+  description = "Enable resource usage alerts (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_deployment_alerts" {
-  description = "Enable deployment failure alerts"
+  description = "Enable deployment failure alerts (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_lb_alerts" {
-  description = "Enable load balancer alerts"
+  description = "Enable load balancer alerts (requires load balancer)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "cpu_threshold_percent" {
@@ -448,9 +448,9 @@ variable "create_overview_dashboard" {
 }
 
 variable "create_gke_dashboard" {
-  description = "Create GKE-specific dashboard"
+  description = "Create GKE-specific dashboard (requires running cluster)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "create_uptime_checks" {

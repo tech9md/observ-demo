@@ -13,7 +13,7 @@
             "dataSets": [{
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "resource.type=\"k8s_pod\" AND resource.labels.cluster_name=\"${cluster_name}\"",
+                  "filter": "resource.type=\"k8s_pod\" AND resource.labels.cluster_name=\"${cluster_name}\" AND metric.type=\"kubernetes.io/pod/network/received_bytes_count\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
                     "perSeriesAligner": "ALIGN_MEAN",
