@@ -1,6 +1,7 @@
 # Prometheus Stack Configuration
 # Includes: Prometheus, Alertmanager, Grafana, and exporters
 # Using kube-prometheus-stack Helm chart
+# Configured for GKE Autopilot compatibility
 
 # Global configuration
 global:
@@ -10,6 +11,13 @@ global:
 # Prometheus Operator
 prometheusOperator:
   enabled: true
+  # Deploy in observability namespace, not kube-system
+  namespaces:
+    releaseNamespace: true
+    additional: []
+  # Disable admission webhooks that need kube-system
+  admissionWebhooks:
+    enabled: false
   resources:
     requests:
       cpu: 100m
@@ -153,39 +161,83 @@ alertmanager:
 grafana:
   enabled: false
 
-# Node Exporter - Collect node metrics
+# Node Exporter - DISABLED for GKE Autopilot
+# (requires hostPID, hostNetwork, hostPath which are not allowed)
 nodeExporter:
-  enabled: true
+  enabled: false
+
+# Prometheus Node Exporter subchart - DISABLED for GKE Autopilot
+prometheus-node-exporter:
+  enabled: false
 
 # Kube State Metrics - Collect Kubernetes metrics
-kubeStateMetrics:
-  enabled: true
+# Note: Using subchart configuration key 'kube-state-metrics'
+kube-state-metrics:
+  # Disable the problematic node affinity for EKS
+  nodeSelector: {}
+  affinity: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
-# Default Prometheus Rules
+# Kubelet service - DISABLED for GKE Autopilot
+# (cannot access kube-system resources)
+kubelet:
+  enabled: false
+
+# Kube Controller Manager - DISABLED (not accessible in Autopilot)
+kubeControllerManager:
+  enabled: false
+
+# Kube Scheduler - DISABLED (not accessible in Autopilot)
+kubeScheduler:
+  enabled: false
+
+# Kube Proxy - DISABLED (not accessible in Autopilot)
+kubeProxy:
+  enabled: false
+
+# Kube Etcd - DISABLED (not accessible in Autopilot)
+kubeEtcd:
+  enabled: false
+
+# CoreDNS - DISABLED (cannot access kube-system)
+coreDns:
+  enabled: false
+
+# Kube API Server - DISABLED (cannot access kube-system)
+kubeApiServer:
+  enabled: false
+
+# Default Prometheus Rules - Adjusted for Autopilot
 defaultRules:
   create: true
   rules:
     alertmanager: true
-    etcd: false
+    etcd: false  # Not accessible in Autopilot
     configReloaders: true
     general: true
     k8s: true
-    kubeApiserverAvailability: true
-    kubeApiserverSlos: true
-    kubelet: true
-    kubeProxy: false
+    kubeApiserverAvailability: false  # Not accessible in Autopilot
+    kubeApiserverSlos: false  # Not accessible in Autopilot
+    kubelet: false  # Not accessible in Autopilot
+    kubeProxy: false  # Not accessible in Autopilot
     kubePrometheusGeneral: true
-    kubePrometheusNodeRecording: true
+    kubePrometheusNodeRecording: false  # Needs node-exporter
     kubernetesApps: true
     kubernetesResources: true
     kubernetesStorage: true
-    kubernetesSystem: true
-    kubeScheduler: false
+    kubernetesSystem: false  # Not accessible in Autopilot
+    kubeScheduler: false  # Not accessible in Autopilot
     kubeStateMetrics: true
-    network: true
-    node: true
-    nodeExporterAlerting: true
-    nodeExporterRecording: true
+    network: false  # Needs node-exporter
+    node: false  # Needs node-exporter
+    nodeExporterAlerting: false  # Needs node-exporter
+    nodeExporterRecording: false  # Needs node-exporter
     prometheus: true
     prometheusOperator: true
 
