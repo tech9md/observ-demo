@@ -210,30 +210,9 @@ config:
           - batch
         exporters: [logging]
 
-# Service configuration
+# Service configuration - use chart defaults
 service:
   type: ClusterIP
-  ports:
-    # OTLP gRPC receiver
-    otlp-grpc:
-      port: 4317
-      targetPort: 4317
-      protocol: TCP
-    # OTLP HTTP receiver
-    otlp-http:
-      port: 4318
-      targetPort: 4318
-      protocol: TCP
-    # Prometheus metrics endpoint
-    metrics:
-      port: 8888
-      targetPort: 8888
-      protocol: TCP
-    # Prometheus exporter
-    prometheus:
-      port: 8889
-      targetPort: 8889
-      protocol: TCP
 
 # Pod annotations for Prometheus scraping
 podAnnotations:
@@ -274,39 +253,10 @@ serviceMonitor:
   interval: 30s
   scrapeTimeout: 10s
 
-# Network Policy
+# Network Policy - disabled for simplicity in demo
+# The chart manages network policy internally
 networkPolicy:
-  enabled: true
-  policyTypes:
-    - Ingress
-    - Egress
-
-  # Allow ingress from microservices-demo namespace
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: microservices-demo
-        - namespaceSelector:
-            matchLabels:
-              name: opentelemetry
-      ports:
-        - protocol: TCP
-          port: 4317
-        - protocol: TCP
-          port: 4318
-
-  # Allow egress to GCP APIs
-  egress:
-    - to:
-        - namespaceSelector: {}
-      ports:
-        - protocol: TCP
-          port: 443  # HTTPS for GCP APIs
-        - protocol: TCP
-          port: 53   # DNS
-        - protocol: UDP
-          port: 53   # DNS
+  enabled: false
 
 # Liveness and readiness probes
 livenessProbe:
@@ -327,8 +277,8 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
-# Environment variables
-env:
+# Extra environment variables (using correct chart schema)
+extraEnvs:
   - name: GOGC
     value: "80"  # More aggressive garbage collection
   - name: GOMEMLIMIT
