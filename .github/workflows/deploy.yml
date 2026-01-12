@@ -197,7 +197,7 @@ jobs:
             --namespace opentelemetry \
             --values values-collector.yaml \
             --wait \
-            --timeout 5m
+            --timeout 10m
 
       # ---- Deploy Microservices Demo ----
       - name: Create Microservices Namespace

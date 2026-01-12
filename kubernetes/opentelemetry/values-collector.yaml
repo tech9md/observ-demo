@@ -282,11 +282,10 @@ readinessProbe:
   failureThreshold: 3
 
 # Extra environment variables (using correct chart schema)
+# Note: GOMEMLIMIT is set by the chart based on resource limits, so we don't override it
 extraEnvs:
   - name: GOGC
     value: "80"  # More aggressive garbage collection
-  - name: GOMEMLIMIT
-    value: "200MiB"  # Memory limit for Go runtime (reduced for demo)
 
 # Affinity rules for better distribution
 affinity:
