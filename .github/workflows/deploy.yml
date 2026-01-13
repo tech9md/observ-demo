@@ -206,13 +206,15 @@ jobs:
           kubectl label namespace microservices-demo name=microservices-demo --overwrite
 
       - name: Deploy Microservices Demo
-        working-directory: kubernetes/microservices-demo
         run: |
-          helm repo add google-cloud-demo https://googlecloudplatform.github.io/microservices-demo
+          # Clone the microservices-demo repo to get the Helm chart
+          git clone --depth 1 https://github.com/GoogleCloudPlatform/microservices-demo.git /tmp/microservices-demo
+
+          # Install using the Helm chart from the cloned repo
           helm upgrade --install microservices-demo \
-            google-cloud-demo/microservices-demo \
+            /tmp/microservices-demo/helm-chart \
             --namespace microservices-demo \
-            --values values-gcp.yaml \
+            --values kubernetes/microservices-demo/values-gcp.yaml \
             --wait \
             --timeout 10m
 
