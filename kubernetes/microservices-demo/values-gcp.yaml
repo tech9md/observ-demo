@@ -11,7 +11,22 @@ loadGenerator:
 
 # OpenTelemetry configuration
 opentelemetryCollector:
-  create: false  # We deploy our own collector
+  create: false  # We deploy our own collector in opentelemetry namespace
+
+# Configure services to send traces to our OpenTelemetry Collector
+default:
+  env:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: "http://otel-collector-opentelemetry-collector.opentelemetry.svc.cluster.local:4317"
+    - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      value: cumulative
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.namespace=microservices-demo,deployment.environment=demo
+    - name: OTEL_SERVICE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.labels['app']
 
 # Disable network policies for simplicity in demo
 networkPolicies:
