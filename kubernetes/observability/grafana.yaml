@@ -174,12 +174,13 @@ spec:
             - name: grafana-dashboards-microservices
               mountPath: /var/lib/grafana/dashboards/microservices
           resources:
+            # GKE Autopilot minimum: 250m CPU, 512Mi memory
             requests:
-              cpu: 25m
-              memory: 64Mi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 500m
+              memory: 1Gi
           livenessProbe:
             httpGet:
               path: /api/health

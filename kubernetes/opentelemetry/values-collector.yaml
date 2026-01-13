@@ -15,14 +15,14 @@ mode: deployment
 # Single replica for demo
 replicaCount: 1
 
-# Resource limits - minimal for demo
+# GKE Autopilot minimum: 250m CPU, 512Mi memory
 resources:
   limits:
-    cpu: 200m
-    memory: 256Mi
+    cpu: 500m
+    memory: 1Gi
   requests:
-    cpu: 50m
-    memory: 128Mi
+    cpu: 250m
+    memory: 512Mi
 
 # OpenTelemetry Collector Configuration
 config:

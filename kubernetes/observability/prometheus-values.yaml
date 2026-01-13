@@ -20,12 +20,13 @@ prometheusOperator:
   admissionWebhooks:
     enabled: false
   resources:
+    # GKE Autopilot minimum: 250m CPU, 512Mi memory
     requests:
-      cpu: 25m
-      memory: 64Mi
+      cpu: 250m
+      memory: 512Mi
     limits:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 500m
+      memory: 1Gi
 
 # Prometheus Server
 prometheus:
@@ -41,14 +42,14 @@ prometheus:
     retention: 3d
     retentionSize: "3GB"
 
-    # Resource limits - minimal for demo
+    # GKE Autopilot minimum: 250m CPU, 512Mi memory
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
-      limits:
-        cpu: 300m
+        cpu: 250m
         memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
 
     # Storage - reduced from 20Gi to 5Gi for demo
     storageSpec:
@@ -137,18 +138,19 @@ prometheus:
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
 
-# Alertmanager - minimal for demo
+# Alertmanager
 alertmanager:
   enabled: true
 
   alertmanagerSpec:
+    # GKE Autopilot minimum: 250m CPU, 512Mi memory
     resources:
       requests:
-        cpu: 10m
-        memory: 32Mi
+        cpu: 250m
+        memory: 512Mi
       limits:
-        cpu: 50m
-        memory: 64Mi
+        cpu: 500m
+        memory: 1Gi
 
     # Storage - reduced from 2Gi to 1Gi for demo
     storage:
@@ -175,17 +177,16 @@ prometheus-node-exporter:
 # Kube State Metrics - Collect Kubernetes metrics
 # Note: Using subchart configuration key 'kube-state-metrics'
 kube-state-metrics:
-  # Disable the problematic node affinity for EKS
   nodeSelector: {}
   affinity: {}
-  # Minimal resources for demo
+  # GKE Autopilot minimum: 250m CPU, 512Mi memory
   resources:
     requests:
-      cpu: 25m
-      memory: 32Mi
+      cpu: 250m
+      memory: 512Mi
     limits:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 500m
+      memory: 1Gi
 
 # Kubelet service - DISABLED for GKE Autopilot
 # (cannot access kube-system resources)
