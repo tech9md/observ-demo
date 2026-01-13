@@ -163,13 +163,10 @@ kubectl get nodes
 kubectl port-forward -n observability svc/jaeger-query 16686:16686
 # Access: http://localhost:16686
 
-# Prometheus (Metrics)
+# Prometheus (Metrics & Alerts)
 kubectl port-forward -n observability svc/prometheus-kube-prometheus-prometheus 9090:9090
 # Access: http://localhost:9090
-
-# Alertmanager (Alerts)
-kubectl port-forward -n observability svc/prometheus-kube-prometheus-alertmanager 9093:9093
-# Access: http://localhost:9093
+# Note: Alerts visible in Prometheus UI > Alerts
 
 # Grafana (Dashboards)
 kubectl port-forward -n observability svc/grafana 3000:3000

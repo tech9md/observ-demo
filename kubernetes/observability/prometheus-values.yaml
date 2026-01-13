@@ -138,9 +138,10 @@ prometheus:
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
 
-# Alertmanager
+# Alertmanager - DISABLED for demo (saves ~1.5 CPU, 5Gi RAM)
+# Alerts still fire in Prometheus, just no routing/silencing/grouping
 alertmanager:
-  enabled: true
+  enabled: false
 
   alertmanagerSpec:
     # GKE Autopilot minimum: 250m CPU, 512Mi memory
@@ -151,6 +152,29 @@ alertmanager:
       limits:
         cpu: 500m
         memory: 1Gi
+
+    # CRITICAL: Reduce init container resources for GKE Autopilot
+    # The prometheus-operator sets very high defaults that cause quota issues
+    initContainers:
+      - name: init-config-reloader
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+
+    # CRITICAL: Reduce config-reloader sidecar resources
+    containers:
+      - name: config-reloader
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
 
     # Storage - reduced from 2Gi to 1Gi for demo
     storage:
