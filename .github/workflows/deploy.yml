@@ -211,10 +211,11 @@ jobs:
           git clone --depth 1 https://github.com/GoogleCloudPlatform/microservices-demo.git /tmp/microservices-demo
 
           # Install without --wait to avoid API rate limiting on GKE Autopilot
-          # Autopilot mutates each deployment which causes additional API calls
+          # Use simplified values that disable loadgenerator and let Autopilot set resources
           helm upgrade --install microservices-demo \
             /tmp/microservices-demo/helm-chart \
             --namespace microservices-demo \
+            --values kubernetes/microservices-demo/values-gcp.yaml \
             --timeout 5m
 
       - name: Wait for Microservices Demo Pods
