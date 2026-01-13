@@ -27,7 +27,7 @@ data:
       - name: Prometheus
         type: prometheus
         access: proxy
-        url: http://prometheus-server.observability.svc.cluster.local:9090
+        url: http://prometheus-kube-prometheus-prometheus.observability.svc.cluster.local:9090
         isDefault: true
         editable: true
         jsonData:
