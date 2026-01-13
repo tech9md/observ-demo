@@ -398,32 +398,35 @@ kubectl rollout restart deployment/grafana -n observability
 
 ### High Memory Usage
 
-The observability stack can use significant memory:
+The observability stack is configured for GKE Autopilot minimum requirements:
 
-**Current Resource Allocation:**
-- Jaeger: 512Mi (request) / 1Gi (limit)
-- Prometheus: 2Gi (request) / 4Gi (limit)
-- Grafana: 256Mi (request) / 512Mi (limit)
+**Current Resource Allocation (GKE Autopilot Minimums):**
 
-**To reduce memory usage:**
+| Component | CPU Request | Memory Request | CPU Limit | Memory Limit |
+|-----------|-------------|----------------|-----------|--------------|
+| Jaeger | 250m | 512Mi | 500m | 1Gi |
+| Prometheus Server | 250m | 512Mi | 1000m | 2Gi |
+| Prometheus Operator | 250m | 512Mi | 500m | 1Gi |
+| Alertmanager | 250m | 512Mi | 500m | 1Gi |
+| Kube State Metrics | 250m | 512Mi | 500m | 1Gi |
+| Grafana | 250m | 512Mi | 500m | 1Gi |
+
+**Important:** GKE Autopilot enforces minimum 250m CPU and 512Mi memory per container.
+
+**To reduce storage usage:**
 
 1. **Reduce Prometheus retention:**
    Edit `prometheus-values.yaml`:
    ```yaml
-   retention: 3d  # Changed from 7d
-   retentionSize: "5GB"  # Changed from 10GB
+   retention: 3d
+   retentionSize: "3GB"
    ```
 
 2. **Reduce Jaeger trace retention:**
    Edit `jaeger-all-in-one.yaml`:
    ```yaml
    args:
-     - "--memory.max-traces=5000"  # Changed from 10000
-   ```
-
-3. **Redeploy:**
-   ```bash
-   ./deploy-observability-stack.sh
+     - "--memory.max-traces=5000"
    ```
 
 ## Cost Optimization
@@ -432,10 +435,11 @@ The observability stack can use significant memory:
 
 | Component | Resources | Estimated Cost |
 |-----------|-----------|----------------|
-| Jaeger | 512Mi RAM, 200m CPU | ~$8-12 |
-| Prometheus | 2Gi RAM, 500m CPU | ~$20-30 |
-| Grafana | 256Mi RAM, 100m CPU | ~$5-8 |
-| **Total** | | **$33-50** |
+| Jaeger | 250m CPU, 512Mi RAM | ~$8-12 |
+| Prometheus (Server + Operator + Alertmanager) | 750m CPU, 1.5Gi RAM | ~$25-35 |
+| Kube State Metrics | 250m CPU, 512Mi RAM | ~$8-10 |
+| Grafana | 250m CPU, 512Mi RAM | ~$8-10 |
+| **Total** | ~1.5 vCPU, 3Gi RAM | **$50-70** |
 
 **Note:** This is in addition to the OpenTelemetry Collector (~$5-10) and Microservices Demo (~$25-30).
 
