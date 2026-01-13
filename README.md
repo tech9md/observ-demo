@@ -167,14 +167,14 @@ kubectl port-forward -n observability svc/jaeger-query 16686:16686
 kubectl port-forward -n observability svc/prometheus-kube-prometheus-prometheus 9090:9090
 # Access: http://localhost:9090
 
+# Alertmanager (Alerts)
+kubectl port-forward -n observability svc/prometheus-kube-prometheus-alertmanager 9093:9093
+# Access: http://localhost:9093
+
 # Grafana (Dashboards)
 kubectl port-forward -n observability svc/grafana 3000:3000
 # Access: http://localhost:3000
 # Credentials: admin / admin123
-
-# Alertmanager
-kubectl port-forward -n observability svc/prometheus-kube-prometheus-alertmanager 9093:9093
-# Access: http://localhost:9093
 
 # Microservices Demo Frontend
 kubectl port-forward -n microservices-demo svc/frontend 8080:80
