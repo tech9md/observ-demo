@@ -147,6 +147,36 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
+      - name: Wait for Cluster Nodes to be Ready
+        run: |
+          echo "Waiting for all nodes to be Ready..."
+          # Wait up to 10 minutes for nodes to be ready
+          for i in {1..20}; do
+            READY_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || echo "0")
+            TOTAL_NODES=$(kubectl get nodes --no-headers 2>/dev/null | wc -l || echo "0")
+            echo "Attempt $i/20: $READY_NODES/$TOTAL_NODES nodes ready"
+            if [ "$READY_NODES" -gt 0 ] && [ "$READY_NODES" -eq "$TOTAL_NODES" ]; then
+              echo "All nodes are ready!"
+              kubectl get nodes
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Warning: Not all nodes ready after 10 minutes"
+              kubectl get nodes
+              kubectl describe nodes || true
+            fi
+            sleep 30
+          done
+
+      - name: Wait for System Pods
+        run: |
+          echo "Waiting for kube-system pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --all \
+            --namespace=kube-system \
+            --timeout=300s || true
+          kubectl get pods -n kube-system
+
       # ---- Deploy Observability Stack ----
       - name: Create Observability Namespace
         run: |
@@ -172,12 +202,19 @@ jobs:
       - name: Deploy Prometheus Stack
         working-directory: kubernetes/observability
         run: |
+          echo "Deploying Prometheus stack (this may take several minutes)..."
           helm upgrade --install prometheus \
             prometheus-community/kube-prometheus-stack \
             --namespace observability \
             --values prometheus-values.yaml \
             --wait \
-            --timeout 10m
+            --timeout 15m \
+            --debug 2>&1 | tail -100 || {
+              echo "Helm install failed. Checking pod status..."
+              kubectl get pods -n observability
+              kubectl describe pods -n observability -l app.kubernetes.io/name=kube-prometheus-stack-operator || true
+              exit 1
+            }
 
       - name: Deploy Grafana
         working-directory: kubernetes/observability

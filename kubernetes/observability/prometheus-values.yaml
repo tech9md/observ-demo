@@ -19,14 +19,17 @@ prometheusOperator:
   # Disable admission webhooks that need kube-system
   admissionWebhooks:
     enabled: false
+  # Tolerate all taints to ensure scheduling
+  tolerations:
+    - operator: "Exists"
+  # Reduced resources for better scheduling
   resources:
-    # GKE Autopilot minimum: 250m CPU, 512Mi memory
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
       cpu: 500m
-      memory: 1Gi
+      memory: 512Mi
 
 # Prometheus Server
 prometheus:
@@ -42,10 +45,14 @@ prometheus:
     retention: 3d
     retentionSize: "3GB"
 
-    # GKE Autopilot minimum: 250m CPU, 512Mi memory
+    # Tolerate all taints to ensure scheduling
+    tolerations:
+      - operator: "Exists"
+
+    # Reduced resources for better scheduling
     resources:
       requests:
-        cpu: 250m
+        cpu: 100m
         memory: 512Mi
       limits:
         cpu: 1000m
@@ -203,14 +210,17 @@ prometheus-node-exporter:
 kube-state-metrics:
   nodeSelector: {}
   affinity: {}
-  # GKE Autopilot minimum: 250m CPU, 512Mi memory
+  # Tolerate all taints to ensure scheduling
+  tolerations:
+    - operator: "Exists"
+  # Reduced resources for better scheduling
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 50m
+      memory: 128Mi
     limits:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 200m
+      memory: 256Mi
 
 # Kubelet service - DISABLED for GKE Autopilot
 # (cannot access kube-system resources)
