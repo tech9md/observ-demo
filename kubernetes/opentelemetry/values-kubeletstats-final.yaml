@@ -2,10 +2,9 @@
 # Uses status.hostIP to access kubelet without hostNetwork
 # Based on GKE Autopilot best practices
 
-mode: deployment
+mode: daemonset
 
-# Single replica for testing (DaemonSet blocked by Autopilot scheduler)
-replicaCount: 1
+# DaemonSet mode - one collector per node for complete metrics coverage
 
 image:
   repository: otel/opentelemetry-collector-contrib
@@ -27,14 +26,14 @@ clusterRole:
       resources: ["nodes", "pods", "namespaces"]
       verbs: ["get", "list", "watch"]
 
-# Autopilot-compliant resources (MUST be specified)
+# Autopilot-compliant resources - increased to trigger node scaling
 resources:
   limits:
-    cpu: 300m
-    memory: 512Mi
+    cpu: 500m
+    memory: 1Gi
   requests:
-    cpu: 250m
-    memory: 512Mi
+    cpu: 500m
+    memory: 1Gi
 
 # OpenTelemetry Collector Configuration
 config:

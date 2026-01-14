@@ -1,22 +1,36 @@
-# Infrastructure Fix - IAM Roles
+# Infrastructure Fix - IAM Roles & Disk Quota
 
-## Problem
+## Problems Fixed
 
+### Problem 1: Missing IAM Role
 The GKE Autopilot cluster was missing critical IAM role assignments for the node service account, causing:
 - Degraded logging and monitoring
 - HPA (Horizontal Pod Autoscaler) issues
 - Inability to scale up nodes
 - Webhook validation failures
 
-## Solution
+### Problem 2: Disk Quota Exceeded
+The cluster was deployed as **regional** (3 zones), using 300GB of disk quota:
+- 100GB per zone × 3 zones = 300GB used
+- Project quota: 400GB total
+- Only 100GB remaining - not enough for new nodes
 
-Added IAM role binding in Terraform to grant `roles/container.defaultNodeServiceAccount` to the GKE node service account (default Compute Engine service account).
+## Solutions
+
+### Fix 1: IAM Role Binding
+Added IAM role binding in Terraform to grant `roles/container.defaultNodeServiceAccount` to the GKE node service account.
+
+### Fix 2: Zonal Cluster
+Changed from regional (3-zone) to zonal (1-zone) deployment:
+- Reduces disk usage from 300GB to 100GB
+- Frees up 200GB of quota for workloads
+- Sufficient for demo/dev environments
 
 ## Changes Made
 
-### File: `terraform/modules/gcp/project-setup/main.tf`
+### File 1: `terraform/modules/gcp/project-setup/main.tf`
 
-Added:
+Added IAM binding for GKE node service account:
 ```hcl
 # Data source to get project number
 data "google_project" "project" {
@@ -33,14 +47,39 @@ resource "google_project_iam_member" "gke_node_service_account" {
 }
 ```
 
+### File 2: `terraform/variables.tf`
+
+Changed cluster mode from regional to zonal:
+```hcl
+variable "regional_cluster" {
+  description = "Create a regional cluster (true) or zonal cluster (false). Zonal uses less disk quota."
+  type        = bool
+  default     = false  # Changed from true to reduce disk quota (100GB vs 300GB)
+}
+```
+
 ## Deployment Options
+
+### ⚠️ IMPORTANT: Cluster Recreated
+
+Changing from regional to zonal **requires cluster recreation**:
+- All existing workloads will be deleted
+- Kubernetes applications must be redeployed
+- Cluster endpoint/credentials will change
 
 ### Option 1: GitHub Actions (Recommended)
 
 1. Commit and push the changes:
    ```bash
+   git add terraform/variables.tf
    git add terraform/modules/gcp/project-setup/main.tf
-   git commit -m "Fix: Add missing IAM role for GKE node service account"
+   git add kubernetes/opentelemetry/values-kubeletstats-final.yaml
+   git add INFRASTRUCTURE_FIX.md
+   git commit -m "Fix: Switch to zonal cluster and add IAM role for GKE nodes
+
+- Changed regional_cluster from true to false (reduces disk from 300GB to 100GB)
+- Added roles/container.defaultNodeServiceAccount to GKE node service account
+- Updated kubeletstats collector to use DaemonSet mode"
    git push origin main
    ```
 
@@ -51,8 +90,8 @@ resource "google_project_iam_member" "gke_node_service_account" {
    - Click "Run workflow"
 
 3. Monitor the deployment:
-   - Infrastructure updates should complete in ~5-10 minutes
-   - No cluster recreation required (IAM change only)
+   - Cluster recreation takes ~15-20 minutes
+   - Kubernetes apps will be redeployed automatically by the workflow
 
 ### Option 2: Local Terraform (If you have credentials)
 
