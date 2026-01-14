@@ -122,7 +122,7 @@ variable "zone" {
 variable "regional_cluster" {
   description = "Create a regional cluster (true) or zonal cluster (false). Zonal uses less disk quota."
   type        = bool
-  default     = false  # Changed to zonal to reduce disk quota usage (100GB vs 300GB)
+  default     = false  # Zonal cluster to save disk quota (30GB vs 90GB for regional)
 }
 
 variable "enable_private_nodes" {

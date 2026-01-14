@@ -1,6 +1,7 @@
-# GKE Autopilot Cluster Module
-# This module creates a cost-optimized, secure GKE Autopilot cluster
+# GKE Standard Cluster Module
+# This module creates a cost-optimized, secure GKE Standard cluster
 # with Workload Identity, private nodes, and security best practices.
+# Optimized for demo environments with smaller boot disks to save quota.
 
 terraform {
   required_version = ">= 1.6.0"
@@ -12,15 +13,17 @@ terraform {
   }
 }
 
-# GKE Autopilot Cluster
-resource "google_container_cluster" "autopilot" {
+# GKE Standard Cluster
+resource "google_container_cluster" "primary" {
   provider = google
   project  = var.project_id
   name     = var.cluster_name
   location = var.regional_cluster ? var.region : var.zone
 
-  # Enable Autopilot mode for fully managed, cost-optimized cluster
-  enable_autopilot = true
+  # Standard GKE (not Autopilot) - allows zonal deployment and custom disk sizes
+  # We remove the default node pool and create our own
+  remove_default_node_pool = true
+  initial_node_count       = 1
 
   # Network configuration
   network    = var.network_name
@@ -75,13 +78,22 @@ resource "google_container_cluster" "autopilot" {
     }
   }
 
-  # Note: For Autopilot, most configurations are managed automatically
-  # Explicitly setting addons_config can cause "invalid argument" errors
-  # Binary authorization, VPA, security posture are also managed by Autopilot
+  # Addons configuration for Standard GKE
+  addons_config {
+    http_load_balancing {
+      disabled = false
+    }
+    horizontal_pod_autoscaling {
+      disabled = false
+    }
+    gce_persistent_disk_csi_driver_config {
+      enabled = true
+    }
+  }
 
-  # Monitoring and logging - use SYSTEM_COMPONENTS only for Autopilot compatibility
+  # Monitoring and logging
   monitoring_config {
-    enable_components = ["SYSTEM_COMPONENTS"]
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
 
     managed_prometheus {
       enabled = var.enable_managed_prometheus
@@ -89,7 +101,7 @@ resource "google_container_cluster" "autopilot" {
   }
 
   logging_config {
-    enable_components = ["SYSTEM_COMPONENTS"]
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
   }
 
   # Resource labels
@@ -97,7 +109,7 @@ resource "google_container_cluster" "autopilot" {
     var.labels,
     {
       cluster-name = var.cluster_name
-      mode         = "autopilot"
+      mode         = "standard"
       managed-by   = "terraform"
     }
   )
@@ -106,22 +118,15 @@ resource "google_container_cluster" "autopilot" {
   deletion_protection = var.deletion_protection
 
   # Description
-  description = "GKE Autopilot cluster for observability demo - managed by Terraform"
+  description = "GKE Standard cluster for observability demo - managed by Terraform"
 
   # Lifecycle configuration
   lifecycle {
     ignore_changes = [
       # Ignore node version changes as GKE auto-upgrades
       node_version,
-      # Ignore monitoring config changes from GKE auto-updates
-      monitoring_config,
     ]
   }
-
-  # Wait for APIs to be enabled
-  depends_on = [
-    # Assumes project-setup module has enabled required APIs
-  ]
 
   timeouts {
     create = "45m"
@@ -130,8 +135,73 @@ resource "google_container_cluster" "autopilot" {
   }
 }
 
+# Node Pool for GKE Standard cluster
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "${var.cluster_name}-node-pool"
+  location   = var.regional_cluster ? var.region : var.zone
+  cluster    = google_container_cluster.primary.name
+  project    = var.project_id
+
+  # Node count configuration
+  initial_node_count = var.regional_cluster ? 1 : 2  # 1 per zone if regional, 2 if zonal
+
+  # Autoscaling configuration
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 5
+  }
+
+  # Node management
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  # Node configuration
+  node_config {
+    # Cost-optimized machine type for demo
+    machine_type = "e2-standard-2"  # 2 vCPU, 8GB RAM
+
+    # CRITICAL: Smaller boot disk to save quota (30GB instead of 100GB)
+    disk_size_gb = 30
+    disk_type    = "pd-standard"  # Standard persistent disk (cheaper than SSD)
+
+    # OAuth scopes
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+
+    # Labels
+    labels = {
+      env        = "demo"
+      managed-by = "terraform"
+    }
+
+    # Workload Identity
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
+    # Shielded instance config
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_integrity_monitoring = true
+    }
+
+    # Tags for firewall rules
+    tags = ["gke-node", var.cluster_name]
+  }
+
+  # Upgrade settings
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 0
+  }
+
+  depends_on = [google_container_cluster.primary]
+}
+
 # Workload Identity binding for OpenTelemetry collector
-# Note: depends_on cluster because the identity pool is created with the cluster
 resource "google_service_account_iam_member" "otel_workload_identity" {
   count = var.create_workload_identity_bindings && var.otel_service_account_email != "" ? 1 : 0
 
@@ -139,11 +209,10 @@ resource "google_service_account_iam_member" "otel_workload_identity" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.otel_namespace}/${var.otel_service_account_name}]"
 
-  depends_on = [google_container_cluster.autopilot]
+  depends_on = [google_container_cluster.primary]
 }
 
 # Workload Identity binding for microservices demo
-# Note: depends_on cluster because the identity pool is created with the cluster
 resource "google_service_account_iam_member" "microservices_workload_identity" {
   count = var.create_workload_identity_bindings && var.microservices_service_account_email != "" ? 1 : 0
 
@@ -151,7 +220,7 @@ resource "google_service_account_iam_member" "microservices_workload_identity" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.microservices_namespace}/${var.microservices_service_account_name}]"
 
-  depends_on = [google_container_cluster.autopilot]
+  depends_on = [google_container_cluster.primary]
 }
 
 # Cloud DNS managed zone for GKE (optional, for custom domains)
@@ -175,14 +244,11 @@ resource "google_dns_managed_zone" "gke_zone" {
 }
 
 # Output cluster credentials to a kubeconfig file (optional)
-# This is typically done via CLI: gcloud container clusters get-credentials
-# but can be useful for automation
-
 locals {
   kubeconfig_template = var.generate_kubeconfig ? templatefile("${path.module}/templates/kubeconfig.tpl", {
-    cluster_name     = google_container_cluster.autopilot.name
-    cluster_endpoint = google_container_cluster.autopilot.endpoint
-    cluster_ca       = google_container_cluster.autopilot.master_auth[0].cluster_ca_certificate
+    cluster_name     = google_container_cluster.primary.name
+    cluster_endpoint = google_container_cluster.primary.endpoint
+    cluster_ca       = google_container_cluster.primary.master_auth[0].cluster_ca_certificate
     project_id       = var.project_id
     region           = var.regional_cluster ? var.region : ""
     zone             = var.regional_cluster ? "" : var.zone

@@ -2,17 +2,17 @@
 
 output "cluster_id" {
   description = "The ID of the cluster"
-  value       = google_container_cluster.autopilot.id
+  value       = google_container_cluster.primary.id
 }
 
 output "cluster_name" {
   description = "The name of the cluster"
-  value       = google_container_cluster.autopilot.name
+  value       = google_container_cluster.primary.name
 }
 
 output "cluster_location" {
   description = "The location (region or zone) of the cluster"
-  value       = google_container_cluster.autopilot.location
+  value       = google_container_cluster.primary.location
 }
 
 output "cluster_region" {
@@ -27,24 +27,24 @@ output "cluster_zone" {
 
 output "cluster_endpoint" {
   description = "The IP address of the cluster master"
-  value       = google_container_cluster.autopilot.endpoint
+  value       = google_container_cluster.primary.endpoint
   sensitive   = true
 }
 
 output "cluster_ca_certificate" {
   description = "The cluster CA certificate (base64 encoded)"
-  value       = google_container_cluster.autopilot.master_auth[0].cluster_ca_certificate
+  value       = google_container_cluster.primary.master_auth[0].cluster_ca_certificate
   sensitive   = true
 }
 
 output "cluster_master_version" {
   description = "The Kubernetes master version"
-  value       = google_container_cluster.autopilot.master_version
+  value       = google_container_cluster.primary.master_version
 }
 
 output "cluster_self_link" {
   description = "The self-link of the cluster"
-  value       = google_container_cluster.autopilot.self_link
+  value       = google_container_cluster.primary.self_link
 }
 
 output "workload_identity_pool" {
@@ -116,27 +116,27 @@ output "kubeconfig_path" {
 output "cluster_summary" {
   description = "Summary of cluster configuration"
   value = {
-    name               = google_container_cluster.autopilot.name
-    location           = google_container_cluster.autopilot.location
-    endpoint           = google_container_cluster.autopilot.endpoint
-    autopilot_enabled  = google_container_cluster.autopilot.enable_autopilot
+    name               = google_container_cluster.primary.name
+    location           = google_container_cluster.primary.location
+    endpoint           = google_container_cluster.primary.endpoint
+    mode               = "standard"  # Changed from Autopilot to Standard
     private_nodes      = var.enable_private_nodes
     private_endpoint   = var.enable_private_endpoint
     workload_identity  = true
     release_channel    = var.release_channel
-    master_version     = google_container_cluster.autopilot.master_version
+    master_version     = google_container_cluster.primary.master_version
     vpc_network        = var.network_name
     subnetwork         = var.subnetwork_name
     regional           = var.regional_cluster
-    security_posture   = var.enable_security_posture
     managed_prometheus = var.enable_managed_prometheus
+    boot_disk_size_gb  = 30  # Reduced from 100GB to save quota
   }
 }
 
 # kubectl configuration command
 output "kubectl_config_command" {
   description = "Command to configure kubectl for this cluster"
-  value       = var.regional_cluster ? "gcloud container clusters get-credentials ${google_container_cluster.autopilot.name} --region ${var.region} --project ${var.project_id}" : "gcloud container clusters get-credentials ${google_container_cluster.autopilot.name} --zone ${var.zone} --project ${var.project_id}"
+  value       = var.regional_cluster ? "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}" : "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --zone ${var.zone} --project ${var.project_id}"
 }
 
 # Workload Identity annotation for Kubernetes service accounts
