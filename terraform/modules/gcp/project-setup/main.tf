@@ -211,12 +211,22 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
-# Grant GKE node service account the required default role
-# GKE Autopilot uses the default Compute Engine service account for nodes
-# This role is required for proper logging, monitoring, and HPA functionality
+# Grant GKE node service account the required roles
+# These roles are required for proper logging, monitoring, and cluster functionality
+locals {
+  gke_node_sa_roles = [
+    "roles/container.defaultNodeServiceAccount",  # Required for GKE node functionality
+    "roles/logging.logWriter",                    # Required for writing logs to Cloud Logging
+    "roles/monitoring.metricWriter",              # Required for writing metrics to Cloud Monitoring
+    "roles/monitoring.viewer",                    # Required for reading monitoring data
+  ]
+}
+
 resource "google_project_iam_member" "gke_node_service_account" {
+  for_each = toset(local.gke_node_sa_roles)
+
   project = var.project_id
-  role    = "roles/container.defaultNodeServiceAccount"
+  role    = each.value
   member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 
   depends_on = [google_project_service.required_apis]
