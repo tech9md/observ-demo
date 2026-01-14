@@ -578,6 +578,60 @@ jobs:
           kubectl delete namespace observability --ignore-not-found=true --timeout=120s || true
           echo "Kubernetes resources deleted."
 
+      - name: Delete Network Endpoint Groups (NEGs)
+        continue-on-error: true
+        run: |
+          echo "Cleaning up Network Endpoint Groups created by GKE..."
+          VPC_NAME="${{ secrets.GCP_PROJECT_ID }}-vpc"
+
+          # List all NEGs in the zone
+          echo "Finding NEGs in zone ${{ github.event.inputs.zone }}..."
+          NEGS=$(gcloud compute network-endpoint-groups list \
+            --filter="zone:${{ github.event.inputs.zone }}" \
+            --format="value(name)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "")
+
+          if [ -n "$NEGS" ]; then
+            echo "Found NEGs to delete:"
+            echo "$NEGS"
+            for NEG in $NEGS; do
+              echo "Deleting NEG: $NEG"
+              gcloud compute network-endpoint-groups delete "$NEG" \
+                --zone=${{ github.event.inputs.zone }} \
+                --project=${{ secrets.GCP_PROJECT_ID }} \
+                --quiet || true
+            done
+            echo "NEG cleanup complete."
+          else
+            echo "No NEGs found in zone ${{ github.event.inputs.zone }}"
+          fi
+
+      - name: Delete Firewall Rules
+        continue-on-error: true
+        run: |
+          echo "Cleaning up firewall rules..."
+          VPC_NAME="${{ secrets.GCP_PROJECT_ID }}-vpc"
+
+          # Find and delete firewall rules associated with the VPC
+          FIREWALL_RULES=$(gcloud compute firewall-rules list \
+            --filter="network:$VPC_NAME" \
+            --format="value(name)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "")
+
+          if [ -n "$FIREWALL_RULES" ]; then
+            echo "Found firewall rules to delete:"
+            echo "$FIREWALL_RULES"
+            for RULE in $FIREWALL_RULES; do
+              echo "Deleting firewall rule: $RULE"
+              gcloud compute firewall-rules delete "$RULE" \
+                --project=${{ secrets.GCP_PROJECT_ID }} \
+                --quiet || true
+            done
+            echo "Firewall cleanup complete."
+          else
+            echo "No firewall rules found for VPC $VPC_NAME"
+          fi
+
       - name: Terraform Init
         working-directory: terraform
         run: |
