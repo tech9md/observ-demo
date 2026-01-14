@@ -107,6 +107,42 @@ jobs:
             -backend-config="bucket=${{ secrets.GCP_PROJECT_ID }}-tfstate" \
             -backend-config="prefix=observ-demo/${{ github.event.inputs.environment }}"
 
+      - name: Import Existing Resources (if needed)
+        working-directory: terraform
+        continue-on-error: true
+        run: |
+          # Import node pool if it exists but isn't in state
+          CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          NODE_POOL_NAME="${CLUSTER_NAME}-node-pool"
+
+          echo "Checking if node pool needs to be imported..."
+
+          # Check if node pool exists in GCP
+          if gcloud container node-pools describe $NODE_POOL_NAME \
+            --cluster=$CLUSTER_NAME \
+            --zone=${{ github.event.inputs.zone }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} &>/dev/null; then
+
+            echo "Node pool exists in GCP. Checking Terraform state..."
+
+            # Check if it's in Terraform state
+            if ! terraform state show module.gke_cluster.google_container_node_pool.primary_nodes &>/dev/null; then
+              echo "Node pool not in state. Importing..."
+              terraform import \
+                -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+                -var="region=${{ github.event.inputs.region }}" \
+                -var="zone=${{ github.event.inputs.zone }}" \
+                -var="environment=${{ github.event.inputs.environment }}" \
+                -var="billing_account=${{ secrets.GCP_BILLING_ACCOUNT }}" \
+                module.gke_cluster.google_container_node_pool.primary_nodes \
+                "projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ github.event.inputs.zone }}/clusters/$CLUSTER_NAME/nodePools/$NODE_POOL_NAME"
+            else
+              echo "Node pool already in Terraform state."
+            fi
+          else
+            echo "Node pool does not exist in GCP yet."
+          fi
+
       - name: Terraform Plan
         working-directory: terraform
         run: |
