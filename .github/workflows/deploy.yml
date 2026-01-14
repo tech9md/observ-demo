@@ -32,6 +32,19 @@ on:
           - us-west1
           - europe-west1
           - asia-southeast1
+      zone:
+        description: 'GCP Zone (for zonal clusters)'
+        required: true
+        default: 'us-central1-a'
+        type: choice
+        options:
+          - us-central1-a
+          - us-central1-b
+          - us-central1-c
+          - us-east1-b
+          - us-west1-a
+          - europe-west1-b
+          - asia-southeast1-a
       auto_approve:
         description: 'Auto-approve Terraform changes'
         required: false
@@ -100,6 +113,7 @@ jobs:
           terraform plan \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             -var="region=${{ github.event.inputs.region }}" \
+            -var="zone=${{ github.event.inputs.zone }}" \
             -var="environment=${{ github.event.inputs.environment }}" \
             -var="billing_account=${{ secrets.GCP_BILLING_ACCOUNT }}" \
             -out=tfplan
@@ -125,7 +139,7 @@ jobs:
       - name: Get GKE Credentials
         run: |
           gcloud container clusters get-credentials ${{ steps.tf-outputs.outputs.cluster_name }} \
-            --region ${{ github.event.inputs.region }} \
+            --zone ${{ github.event.inputs.zone }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Verify Cluster Connection
@@ -245,7 +259,7 @@ jobs:
           echo "============================================"
           echo ""
           echo "Cluster: ${{ steps.tf-outputs.outputs.cluster_name }}"
-          echo "Region: ${{ github.event.inputs.region }}"
+          echo "Zone: ${{ github.event.inputs.zone }}"
           echo "Project: ${{ secrets.GCP_PROJECT_ID }}"
           echo ""
           echo "Pods Status:"
@@ -262,7 +276,7 @@ jobs:
           echo ""
           echo "# Configure kubectl:"
           echo "gcloud container clusters get-credentials ${{ steps.tf-outputs.outputs.cluster_name }} \\"
-          echo "  --region ${{ github.event.inputs.region }} \\"
+          echo "  --zone ${{ github.event.inputs.zone }} \\"
           echo "  --project ${{ secrets.GCP_PROJECT_ID }}"
           echo ""
           echo "# Jaeger (Traces):"
@@ -316,7 +330,7 @@ jobs:
         run: |
           GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
           gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
-            --region ${{ github.event.inputs.region }} \
+            --zone ${{ github.event.inputs.zone }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Scale Down All Deployments
@@ -373,7 +387,7 @@ jobs:
         run: |
           GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
           gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
-            --region ${{ github.event.inputs.region }} \
+            --zone ${{ github.event.inputs.zone }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Scale Up All Deployments
@@ -445,7 +459,7 @@ jobs:
         run: |
           GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
           gcloud container clusters get-credentials $GKE_CLUSTER_NAME \
-            --region ${{ github.event.inputs.region }} \
+            --zone ${{ github.event.inputs.zone }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Delete Kubernetes Resources
@@ -470,6 +484,7 @@ jobs:
           terraform destroy \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             -var="region=${{ github.event.inputs.region }}" \
+            -var="zone=${{ github.event.inputs.zone }}" \
             -var="environment=${{ github.event.inputs.environment }}" \
             -var="billing_account=${{ secrets.GCP_BILLING_ACCOUNT }}" \
             -auto-approve
