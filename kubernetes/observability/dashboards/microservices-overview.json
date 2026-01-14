@@ -112,7 +112,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "CPU Cores",
+            "axisLabel": "CPU Cores (Requests)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -180,12 +180,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"microservices-demo\", container!=\"\"}[5m])) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{namespace=\"microservices-demo\", resource=\"cpu\", unit=\"core\"}) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "CPU Usage by Pod",
+      "title": "CPU Resource Requests by Pod",
       "type": "timeseries"
     },
     {
@@ -202,7 +202,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Memory",
+            "axisLabel": "Memory (Requests)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -270,12 +270,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"microservices-demo\", container!=\"\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{namespace=\"microservices-demo\", resource=\"memory\", unit=\"byte\"}) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "Memory Usage by Pod",
+      "title": "Memory Resource Requests by Pod",
       "type": "timeseries"
     },
     {
@@ -292,7 +292,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Network",
+            "axisLabel": "Restarts",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -304,14 +304,14 @@
               "legend": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "stepAfter",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": true,
+            "showPoints": "always",
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -327,10 +327,18 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -343,7 +351,7 @@
       "id": 4,
       "options": {
         "legend": {
-          "calcs": ["mean", "lastNotNull", "max"],
+          "calcs": ["lastNotNull", "max"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -360,21 +368,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"microservices-demo\"}[5m])) by (pod)",
-          "legendFormat": "{{pod}} (RX)",
+          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"microservices-demo\"}) by (pod)",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"microservices-demo\"}[5m])) by (pod)",
-          "legendFormat": "{{pod}} (TX)",
-          "refId": "B"
         }
       ],
-      "title": "Network Traffic by Pod",
+      "title": "Container Restarts by Pod",
       "type": "timeseries"
     }
   ],

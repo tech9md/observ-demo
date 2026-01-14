@@ -206,4 +206,20 @@ resource "google_project_iam_member" "microservices_roles" {
   depends_on = [google_service_account.microservices_demo]
 }
 
+# Data source to get project number (needed for default compute service account)
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
+# Grant GKE node service account the required default role
+# GKE Autopilot uses the default Compute Engine service account for nodes
+# This role is required for proper logging, monitoring, and HPA functionality
+resource "google_project_iam_member" "gke_node_service_account" {
+  project = var.project_id
+  role    = "roles/container.defaultNodeServiceAccount"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [google_project_service.required_apis]
+}
+
 # Note: Outputs are defined in outputs.tf

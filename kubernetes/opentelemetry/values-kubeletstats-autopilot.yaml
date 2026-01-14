@@ -1,0 +1,154 @@
+# OpenTelemetry Collector - Kubelet Stats for GKE Autopilot
+# This configuration accesses kubelet via localhost without requiring hostNetwork
+# Based on GKE Autopilot-compatible approach
+
+mode: daemonset
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: "0.143.0"
+
+# Service account for kubelet authentication
+serviceAccount:
+  create: true
+  name: otel-collector-kubeletstats
+
+# Cluster role for accessing kubelet metrics
+clusterRole:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["nodes/stats", "nodes/proxy", "nodes/metrics"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["nodes", "pods", "namespaces"]
+      verbs: ["get", "list", "watch"]
+
+# GKE Autopilot minimum resources (reduced to fit in cluster)
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# OpenTelemetry Collector Configuration
+config:
+  receivers:
+    kubeletstats:
+      collection_interval: 30s
+      auth_type: "serviceAccount"
+      endpoint: "https://127.0.0.1:10250"  # Critical: localhost access
+      insecure_skip_verify: true
+      metric_groups:
+        - container
+        - pod
+        - node
+      metrics:
+        # Enable all container/pod metrics
+        container.cpu.utilization:
+          enabled: true
+        container.memory.working_set:
+          enabled: true
+        k8s.pod.cpu.utilization:
+          enabled: true
+        k8s.pod.memory.working_set:
+          enabled: true
+        k8s.pod.network.io:
+          enabled: true
+        k8s.node.cpu.utilization:
+          enabled: true
+        k8s.node.memory.working_set:
+          enabled: true
+
+  processors:
+    batch:
+      timeout: 10s
+      send_batch_size: 512
+
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 75
+      spike_limit_percentage: 25
+
+    # Resource detection
+    resourcedetection:
+      detectors: [env, system]
+      timeout: 5s
+
+    # K8s attributes processor
+    k8sattributes:
+      auth_type: "serviceAccount"
+      passthrough: false
+      extract:
+        metadata:
+          - k8s.namespace.name
+          - k8s.deployment.name
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.node.name
+      pod_association:
+        - sources:
+            - from: resource_attribute
+              name: k8s.pod.uid
+
+  exporters:
+    # Prometheus exporter - for our existing Prometheus/Grafana setup
+    prometheus:
+      endpoint: "0.0.0.0:8889"
+      namespace: "kubeletstats"
+      send_timestamps: true
+      metric_expiration: 5m
+      resource_to_telemetry_conversion:
+        enabled: true
+
+    # Debug exporter
+    debug:
+      verbosity: basic
+
+  extensions:
+    health_check:
+      endpoint: 0.0.0.0:13133
+
+  service:
+    extensions: [health_check]
+    pipelines:
+      metrics:
+        receivers: [kubeletstats]
+        processors: [memory_limiter, resourcedetection, k8sattributes, batch]
+        exporters: [prometheus, debug]
+
+# Service configuration
+service:
+  type: ClusterIP
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8889"
+  prometheus.io/path: "/metrics"
+
+# Ports
+ports:
+  prometheus:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+  health:
+    enabled: true
+    containerPort: 13133
+    servicePort: 13133
+    protocol: TCP
+
+# Tolerations to run on all nodes
+tolerations:
+  - operator: "Exists"
+
+# Disable features not needed
+autoscaling:
+  enabled: false
+
+networkPolicy:
+  enabled: false

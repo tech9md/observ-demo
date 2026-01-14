@@ -1,0 +1,23 @@
+# ServiceMonitor for OpenTelemetry Collector
+# Enables Prometheus to scrape metrics exported by the OTEL Collector
+# These are the application metrics received from microservices via OTLP
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector
+  namespace: opentelemetry
+  labels:
+    app: opentelemetry-collector
+    release: prometheus  # Required for kube-prometheus-stack to discover this ServiceMonitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+  endpoints:
+    - port: prometheus  # Scrape the prometheus port (8889)
+      interval: 30s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - opentelemetry
