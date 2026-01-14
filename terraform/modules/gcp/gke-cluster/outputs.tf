@@ -129,7 +129,7 @@ output "cluster_summary" {
     subnetwork         = var.subnetwork_name
     regional           = var.regional_cluster
     managed_prometheus = var.enable_managed_prometheus
-    boot_disk_size_gb  = 30  # Reduced from 100GB to save quota
+    boot_disk_size_gb  = 50  # Reduced from 100GB to save quota (50GB is GKE minimum)
   }
 }
 

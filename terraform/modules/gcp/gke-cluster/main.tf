@@ -91,9 +91,9 @@ resource "google_container_cluster" "primary" {
     }
   }
 
-  # Monitoring and logging
+  # Monitoring and logging - use only SYSTEM_COMPONENTS for compatibility
   monitoring_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+    enable_components = ["SYSTEM_COMPONENTS"]
 
     managed_prometheus {
       enabled = var.enable_managed_prometheus
@@ -101,7 +101,7 @@ resource "google_container_cluster" "primary" {
   }
 
   logging_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+    enable_components = ["SYSTEM_COMPONENTS"]
   }
 
   # Resource labels
@@ -162,8 +162,8 @@ resource "google_container_node_pool" "primary_nodes" {
     # Cost-optimized machine type for demo
     machine_type = "e2-standard-2"  # 2 vCPU, 8GB RAM
 
-    # CRITICAL: Smaller boot disk to save quota (30GB instead of 100GB)
-    disk_size_gb = 30
+    # Smaller boot disk to save quota (50GB is GKE minimum, default is 100GB)
+    disk_size_gb = 50
     disk_type    = "pd-standard"  # Standard persistent disk (cheaper than SSD)
 
     # OAuth scopes

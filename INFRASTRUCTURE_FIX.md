@@ -23,8 +23,8 @@ The GKE Autopilot cluster had multiple issues preventing proper observability:
 ## Solution: Switch to Standard GKE
 
 Converted from GKE Autopilot to Standard GKE with:
-- **Zonal deployment** (1 zone instead of 3) → 30GB vs 90GB disk usage
-- **30GB boot disk** per node (instead of 100GB default)
+- **Zonal deployment** (1 zone instead of 3) → 50GB vs 90GB disk usage
+- **50GB boot disk** per node (instead of 100GB default)
 - **e2-standard-2** machine type (2 vCPU, 8GB RAM)
 - **Autoscaling** from 1-5 nodes
 - **pd-standard** disk type (cheaper than SSD)
@@ -87,7 +87,7 @@ Changed to zonal deployment:
 variable "regional_cluster" {
   description = "Create a regional cluster (true) or zonal cluster (false). Zonal uses less disk quota."
   type        = bool
-  default     = false  # Zonal cluster to save disk quota (30GB vs 90GB for regional)
+  default     = false  # Zonal cluster to save disk quota (50GB vs 90GB for regional)
 }
 ```
 
@@ -107,7 +107,7 @@ resource "google_project_iam_member" "gke_node_service_account" {
 | Configuration | Nodes | Boot Disk | Total Disk |
 |---------------|-------|-----------|------------|
 | Autopilot Regional (before) | 3 | 100GB | 300GB |
-| Standard Zonal (after) | 1-5 | 30GB | 30-150GB |
+| Standard Zonal (after) | 1-5 | 50GB | 30-150GB |
 
 **Savings:** 150-270GB of disk quota freed up!
 
@@ -131,7 +131,7 @@ Switching from Autopilot to Standard **requires cluster recreation**:
 
 - Convert GKE from Autopilot to Standard mode
 - Use zonal deployment (1 zone instead of 3)
-- Reduce boot disk from 100GB to 30GB
+- Reduce boot disk from 100GB to 50GB
 - Add IAM role for GKE node service account
 - Add kubeletstats collector configuration"
    git push origin main
@@ -236,7 +236,7 @@ Note: This will recreate the cluster again and quota issues will return.
 
 | Feature | Autopilot | Standard |
 |---------|-----------|----------|
-| Boot disk size | 100GB (fixed) | 30GB (configurable) |
+| Boot disk size | 100GB (fixed) | 50GB (configurable) |
 | Zonal cluster | ❌ Not allowed | ✅ Supported |
 | hostNetwork | ❌ Blocked | ✅ Allowed |
 | Resource minimums | 250m/512Mi enforced | ✅ Flexible |
