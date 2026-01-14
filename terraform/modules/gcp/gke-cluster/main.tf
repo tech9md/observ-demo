@@ -159,8 +159,8 @@ resource "google_container_node_pool" "primary_nodes" {
 
   # Node configuration
   node_config {
-    # Cost-optimized machine type for demo
-    machine_type = "e2-standard-2"  # 2 vCPU, 8GB RAM
+    # Machine type sized for observability stack (Prometheus, Grafana, Jaeger, etc.)
+    machine_type = "e2-standard-4"  # 4 vCPU, 16GB RAM
 
     # Smaller boot disk to save quota (50GB is GKE minimum, default is 100GB)
     disk_size_gb = 50

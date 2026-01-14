@@ -25,7 +25,7 @@ The GKE Autopilot cluster had multiple issues preventing proper observability:
 Converted from GKE Autopilot to Standard GKE with:
 - **Zonal deployment** (1 zone instead of 3) → 50GB vs 90GB disk usage
 - **50GB boot disk** per node (instead of 100GB default)
-- **e2-standard-2** machine type (2 vCPU, 8GB RAM)
+- **e2-standard-4** machine type (4 vCPU, 16GB RAM) - sized for observability stack
 - **Autoscaling** from 1-5 nodes
 - **pd-standard** disk type (cheaper than SSD)
 
