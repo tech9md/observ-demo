@@ -582,29 +582,23 @@ jobs:
         continue-on-error: true
         run: |
           echo "Cleaning up Network Endpoint Groups created by GKE..."
-          VPC_NAME="${{ secrets.GCP_PROJECT_ID }}-vpc"
 
-          # List all NEGs in the zone
-          echo "Finding NEGs in zone ${{ github.event.inputs.zone }}..."
-          NEGS=$(gcloud compute network-endpoint-groups list \
-            --filter="zone:${{ github.event.inputs.zone }}" \
-            --format="value(name)" \
-            --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null || echo "")
-
-          if [ -n "$NEGS" ]; then
-            echo "Found NEGs to delete:"
-            echo "$NEGS"
-            for NEG in $NEGS; do
-              echo "Deleting NEG: $NEG"
-              gcloud compute network-endpoint-groups delete "$NEG" \
-                --zone=${{ github.event.inputs.zone }} \
+          # List ALL NEGs in the project (they can be in any zone)
+          echo "Finding all NEGs in project..."
+          gcloud compute network-endpoint-groups list \
+            --format="csv[no-heading](name,zone)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null | while IFS=, read -r NEG_NAME NEG_ZONE; do
+            if [ -n "$NEG_NAME" ]; then
+              # Extract just the zone name from the full URL
+              ZONE_NAME=$(basename "$NEG_ZONE")
+              echo "Deleting NEG: $NEG_NAME in zone: $ZONE_NAME"
+              gcloud compute network-endpoint-groups delete "$NEG_NAME" \
+                --zone="$ZONE_NAME" \
                 --project=${{ secrets.GCP_PROJECT_ID }} \
                 --quiet || true
-            done
-            echo "NEG cleanup complete."
-          else
-            echo "No NEGs found in zone ${{ github.event.inputs.zone }}"
-          fi
+            fi
+          done
+          echo "NEG cleanup complete."
 
       - name: Delete Firewall Rules
         continue-on-error: true
