@@ -203,8 +203,9 @@ resource "google_container_node_pool" "primary_nodes" {
 }
 
 # Workload Identity binding for OpenTelemetry collector
+# Note: Only use static boolean for count to avoid "value depends on resource attributes" error
 resource "google_service_account_iam_member" "otel_workload_identity" {
-  count = var.create_workload_identity_bindings && var.otel_service_account_email != "" ? 1 : 0
+  count = var.create_workload_identity_bindings ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.otel_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"
@@ -214,8 +215,9 @@ resource "google_service_account_iam_member" "otel_workload_identity" {
 }
 
 # Workload Identity binding for microservices demo
+# Note: Only use static boolean for count to avoid "value depends on resource attributes" error
 resource "google_service_account_iam_member" "microservices_workload_identity" {
-  count = var.create_workload_identity_bindings && var.microservices_service_account_email != "" ? 1 : 0
+  count = var.create_workload_identity_bindings ? 1 : 0
 
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.microservices_service_account_email}"
   role               = "roles/iam.workloadIdentityUser"
