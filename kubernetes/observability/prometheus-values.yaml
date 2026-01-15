@@ -19,17 +19,20 @@ prometheusOperator:
   # Disable admission webhooks that need kube-system
   admissionWebhooks:
     enabled: false
+  # Disable TLS for metrics endpoint to simplify setup
+  tls:
+    enabled: false
   # Tolerate all taints to ensure scheduling
   tolerations:
     - operator: "Exists"
-  # Reduced resources for better scheduling
+  # Resources for prometheus-operator (needs more memory for CRD management)
   resources:
     requests:
       cpu: 100m
       memory: 256Mi
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 768Mi
 
 # Prometheus Server
 prometheus:
