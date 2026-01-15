@@ -2,9 +2,11 @@
 # Minimal configuration that works with GKE Standard
 # Load generator disabled to save resources
 
-# Disable load generator to save resources
+# Enable load generator to create traffic for metrics
 loadGenerator:
-  create: false
+  create: true
+  # Reduce load for demo environment
+  replicaCount: 1
 
 # Use default resources from chart - Autopilot will adjust as needed
 # The chart defaults are designed to work with GKE

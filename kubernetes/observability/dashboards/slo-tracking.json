@@ -69,12 +69,12 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "(1 - (sum(rate(http_server_requests_total{status=~\"5..\"}[1h])) / sum(rate(http_server_requests_total[1h])))) * 100",
+          "expr": "(1 - (sum(increase(kube_pod_container_status_restarts_total{namespace=\"microservices-demo\"}[1h])) / sum(kube_pod_info{namespace=\"microservices-demo\"}) / 60)) * 100",
           "legendFormat": "Availability",
           "refId": "A"
         }
       ],
-      "title": "SLO: Availability (99% target)",
+      "title": "SLO: Pod Stability (99% target)",
       "type": "gauge"
     },
     {
@@ -85,7 +85,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "max": 5,
+          "max": 10,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -100,11 +100,11 @@
               },
               {
                 "color": "red",
-                "value": 2
+                "value": 5
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -128,12 +128,12 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_total[5m]))",
-          "legendFormat": "Error Rate",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"microservices-demo\"}[1h]))",
+          "legendFormat": "Restarts",
           "refId": "A"
         }
       ],
-      "title": "SLO: Error Rate (<1% target)",
+      "title": "SLO: Container Restarts (Last Hour)",
       "type": "gauge"
     },
     {
@@ -187,7 +187,7 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(otel_http_server_request_duration_seconds_bucket{service_namespace=\"microservices-demo\"}[5m])) by (le))",
           "legendFormat": "P95 Latency",
           "refId": "A"
         }
@@ -203,7 +203,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "Error Budget Remaining",
+            "axisLabel": "CPU Usage",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -230,10 +230,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
               }
             ]
           },
@@ -250,7 +246,7 @@
       "id": 4,
       "options": {
         "legend": {
-          "calcs": ["mean", "lastNotNull", "min"],
+          "calcs": ["mean", "lastNotNull", "max"],
           "displayMode": "table",
           "placement": "bottom"
         },
@@ -261,12 +257,12 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "100 - ((1 - (sum(rate(http_server_requests_total{status=~\"5..\"}[1h])) / sum(rate(http_server_requests_total[1h])))) / 0.99 * 100)",
-          "legendFormat": "Error Budget Consumed (99% SLO)",
+          "expr": "sum(rate(kubeletstats_container_cpu_usage_seconds_total{k8s_namespace_name=\"microservices-demo\"}[5m])) by (k8s_pod_name) * 100",
+          "legendFormat": "{{k8s_pod_name}}",
           "refId": "A"
         }
       ],
-      "title": "Error Budget Consumption (30 days)",
+      "title": "CPU Usage by Pod",
       "type": "timeseries"
     },
     {
@@ -309,53 +305,7 @@
           },
           "unit": "short"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*5xx.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*4xx.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*2xx.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -377,22 +327,17 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(increase(http_server_requests_total{status=~\"2..\"}[1h]))",
-          "legendFormat": "2xx Success",
+          "expr": "sum(increase(otel_http_server_request_duration_seconds_count{service_namespace=\"microservices-demo\"}[1h])) by (service_name)",
+          "legendFormat": "HTTP - {{service_name}}",
           "refId": "A"
         },
         {
-          "expr": "sum(increase(http_server_requests_total{status=~\"4..\"}[1h]))",
-          "legendFormat": "4xx Client Errors",
+          "expr": "sum(increase(otel_rpc_server_duration_milliseconds_count{service_namespace=\"microservices-demo\"}[1h])) by (service_name)",
+          "legendFormat": "gRPC - {{service_name}}",
           "refId": "B"
-        },
-        {
-          "expr": "sum(increase(http_server_requests_total{status=~\"5..\"}[1h]))",
-          "legendFormat": "5xx Server Errors",
-          "refId": "C"
         }
       ],
-      "title": "SLI: Request Status Distribution",
+      "title": "Request Count by Service (Last Hour)",
       "type": "timeseries"
     },
     {
@@ -434,19 +379,19 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_total[5m])) by (service)",
-          "legendFormat": "{{service}}",
+          "expr": "sum(kubeletstats_container_memory_working_set_bytes{k8s_namespace_name=\"microservices-demo\"}) by (k8s_pod_name) / 1024 / 1024",
+          "legendFormat": "{{k8s_pod_name}}",
           "refId": "A"
         }
       ],
-      "title": "Traffic Distribution by Service",
+      "title": "Memory Usage Distribution (MB)",
       "type": "piechart"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["sre", "slo", "sli", "error-budget"],
+  "tags": ["sre", "slo", "sli", "metrics"],
   "templating": {
     "list": []
   },
@@ -456,7 +401,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "SRE SLO Tracking - Error Budgets",
+  "title": "SRE SLO Tracking - Metrics Overview",
   "uid": "slo-tracking",
   "version": 1
 }

@@ -80,9 +80,14 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_total[1m])) by (service)",
-          "legendFormat": "{{service}}",
+          "expr": "sum(rate(otel_http_server_request_duration_seconds_count{service_namespace=\"microservices-demo\"}[1m])) by (service_name)",
+          "legendFormat": "{{service_name}}",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(otel_rpc_server_duration_milliseconds_count{service_namespace=\"microservices-demo\"}[1m])) by (service_name)",
+          "legendFormat": "gRPC - {{service_name}}",
+          "refId": "B"
         }
       ],
       "title": "Traffic - Request Rate (RPS)",
@@ -96,7 +101,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "max": 1,
+          "max": 100,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -107,15 +112,15 @@
               },
               {
                 "color": "yellow",
-                "value": 0.01
+                "value": 1
               },
               {
                 "color": "red",
-                "value": 0.05
+                "value": 5
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -139,12 +144,12 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(http_server_requests_total[5m])) by (service)",
-          "legendFormat": "{{service}}",
+          "expr": "sum(rate(kube_pod_container_status_restarts_total{namespace=\"microservices-demo\"}[5m])) * 100",
+          "legendFormat": "Restart Rate",
           "refId": "A"
         }
       ],
-      "title": "Errors - Error Rate (5xx)",
+      "title": "Errors - Container Restart Rate",
       "type": "gauge"
     },
     {
@@ -195,53 +200,7 @@
           },
           "unit": "s"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*p50.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*p95.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*p99.*/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -263,18 +222,18 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(http_server_duration_bucket[1m])) by (service, le))",
-          "legendFormat": "{{service}} - p50",
+          "expr": "histogram_quantile(0.50, sum(rate(otel_http_server_request_duration_seconds_bucket{service_namespace=\"microservices-demo\"}[1m])) by (service_name, le))",
+          "legendFormat": "{{service_name}} - p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_bucket[1m])) by (service, le))",
-          "legendFormat": "{{service}} - p95",
+          "expr": "histogram_quantile(0.95, sum(rate(otel_http_server_request_duration_seconds_bucket{service_namespace=\"microservices-demo\"}[1m])) by (service_name, le))",
+          "legendFormat": "{{service_name}} - p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_bucket[1m])) by (service, le))",
-          "legendFormat": "{{service}} - p99",
+          "expr": "histogram_quantile(0.99, sum(rate(otel_http_server_request_duration_seconds_bucket{service_namespace=\"microservices-demo\"}[1m])) by (service_name, le))",
+          "legendFormat": "{{service_name}} - p99",
           "refId": "C"
         }
       ],
@@ -351,13 +310,13 @@
       "pluginVersion": "10.2.3",
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"microservices-demo\"}[5m])) by (pod) * 100",
-          "legendFormat": "CPU - {{pod}}",
+          "expr": "sum(rate(kubeletstats_container_cpu_usage_seconds_total{k8s_namespace_name=\"microservices-demo\"}[5m])) by (k8s_pod_name) * 100",
+          "legendFormat": "CPU - {{k8s_pod_name}}",
           "refId": "A"
         },
         {
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"microservices-demo\"}) by (pod) / sum(container_spec_memory_limit_bytes{namespace=\"microservices-demo\"}) by (pod) * 100",
-          "legendFormat": "Memory - {{pod}}",
+          "expr": "sum(kubeletstats_container_memory_working_set_bytes{k8s_namespace_name=\"microservices-demo\"}) by (k8s_pod_name) / 1024 / 1024 / 512 * 100",
+          "legendFormat": "Memory - {{k8s_pod_name}}",
           "refId": "B"
         }
       ],
