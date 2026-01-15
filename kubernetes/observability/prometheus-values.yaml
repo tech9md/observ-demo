@@ -1,7 +1,7 @@
 # Prometheus Stack Configuration
 # Includes: Prometheus, Alertmanager, Grafana, and exporters
 # Using kube-prometheus-stack Helm chart
-# Configured for GKE Autopilot compatibility
+# Configured for GKE Standard with OpenTelemetry Operator
 # OPTIMIZED FOR DEMO: Minimal resources for 5-10 concurrent users
 
 # Global configuration
@@ -79,8 +79,9 @@ prometheus:
     scrapeInterval: 30s
     evaluationInterval: 30s
 
-    # Additional scrape configs for OpenTelemetry Collector
+    # Additional scrape configs for OpenTelemetry Collectors (managed by OTel Operator)
     additionalScrapeConfigs:
+      # Application telemetry collector (Deployment)
       - job_name: 'otel-collector'
         kubernetes_sd_configs:
           - role: pod
@@ -88,16 +89,53 @@ prometheus:
               names:
                 - opentelemetry
         relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          # Keep pods with prometheus.io/scrape annotation
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
             action: keep
-            regex: opentelemetry-collector
-          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            regex: true
+          # Keep only the main collector (not kubeletstats)
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
             action: keep
-            regex: prometheus
+            regex: opentelemetry.otel-collector
+          # Use annotation port
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
+
+      # Infrastructure metrics collector (DaemonSet) - kubeletstats
+      - job_name: 'kubeletstats-collector'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - opentelemetry
+        relabel_configs:
+          # Keep pods with prometheus.io/scrape annotation
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          # Keep only kubeletstats collector
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
+            action: keep
+            regex: opentelemetry.kubeletstats-collector
+          # Use annotation port
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
 
       # Microservices Demo metrics
       - job_name: 'microservices-demo'

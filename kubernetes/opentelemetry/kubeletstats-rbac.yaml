@@ -1,0 +1,56 @@
+# RBAC for kubeletstats OpenTelemetry Collector
+# Grants permissions to read kubelet stats and Kubernetes metadata
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-kubeletstats
+  namespace: opentelemetry
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-kubeletstats
+rules:
+  # Required for kubeletstats receiver
+  - apiGroups: [""]
+    resources:
+      - nodes/stats
+      - nodes/proxy
+    verbs: ["get", "list", "watch"]
+
+  # Required for k8sattributes processor
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - pods
+      - namespaces
+      - endpoints
+      - services
+    verbs: ["get", "list", "watch"]
+
+  # Required for k8sattributes processor - deployment/replicaset info
+  - apiGroups: ["apps"]
+    resources:
+      - replicasets
+      - deployments
+    verbs: ["get", "list", "watch"]
+
+  # Required for k8sattributes processor - events
+  - apiGroups: [""]
+    resources:
+      - events
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-kubeletstats
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-kubeletstats
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-kubeletstats
+    namespace: opentelemetry

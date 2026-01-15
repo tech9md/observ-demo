@@ -1,0 +1,128 @@
+# OpenTelemetry Collector DaemonSet for Infrastructure Metrics
+# Collects CPU, memory, network, and filesystem metrics from kubelet
+# Deployed as DaemonSet to run on every node
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: kubeletstats-collector
+  namespace: opentelemetry
+spec:
+  mode: daemonset
+  serviceAccount: otel-collector-kubeletstats
+
+  # Resource requirements for GKE
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+  # Pod annotations for Prometheus scraping
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8889"
+    prometheus.io/path: "/metrics"
+
+  # Tolerations to run on all nodes
+  tolerations:
+    - operator: "Exists"
+
+  # Environment variables for node identification
+  env:
+    - name: K8S_NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: K8S_POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+
+  config:
+    receivers:
+      kubeletstats:
+        collection_interval: 30s
+        auth_type: serviceAccount
+        endpoint: "https://${env:K8S_NODE_IP}:10250"
+        insecure_skip_verify: true
+        metric_groups:
+          - container
+          - pod
+          - node
+        metrics:
+          k8s.container.cpu_limit:
+            enabled: true
+          k8s.container.cpu_request:
+            enabled: true
+          k8s.container.memory_limit:
+            enabled: true
+          k8s.container.memory_request:
+            enabled: true
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 512
+
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 25
+
+      # Add Kubernetes metadata to metrics
+      k8sattributes:
+        auth_type: serviceAccount
+        passthrough: false
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.deployment.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.node.name
+            - k8s.container.name
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+
+      # Add resource detection
+      resourcedetection:
+        detectors: [env, gcp]
+        timeout: 5s
+        override: false
+
+    exporters:
+      # Export metrics to Prometheus format
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: "kubeletstats"
+        send_timestamps: true
+        metric_expiration: 5m
+        resource_to_telemetry_conversion:
+          enabled: true
+
+      # Debug exporter for troubleshooting
+      debug:
+        verbosity: basic
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [kubeletstats]
+          processors: [memory_limiter, resourcedetection, k8sattributes, batch]
+          exporters: [prometheus, debug]
+
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888

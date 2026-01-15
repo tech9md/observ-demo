@@ -247,6 +247,43 @@ jobs:
             --timeout=300s || true
           kubectl get pods -n kube-system
 
+      # ---- Deploy cert-manager (required for OpenTelemetry Operator) ----
+      - name: Deploy cert-manager
+        run: |
+          echo "Adding cert-manager Helm repository..."
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+
+          echo "Deploying cert-manager..."
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --set installCRDs=true \
+            --set global.leaderElection.namespace=cert-manager \
+            --wait \
+            --timeout 5m
+
+          echo "Waiting for cert-manager pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --all \
+            --namespace=cert-manager \
+            --timeout=300s
+
+          kubectl get pods -n cert-manager
+
+      # ---- Deploy OpenTelemetry Operator ----
+      - name: Deploy OpenTelemetry Operator
+        run: |
+          echo "Deploying OpenTelemetry Operator..."
+          kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.116.0/opentelemetry-operator.yaml
+
+          echo "Waiting for OpenTelemetry Operator to be ready..."
+          kubectl wait --for=condition=available deployment/opentelemetry-operator-controller-manager \
+            -n opentelemetry-operator-system \
+            --timeout=300s
+
+          kubectl get pods -n opentelemetry-operator-system
+
       # ---- Deploy Observability Stack ----
       - name: Create Observability Namespace
         run: |
@@ -304,21 +341,32 @@ jobs:
             --namespace=observability \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      # ---- Deploy OpenTelemetry Collector ----
+      # ---- Deploy OpenTelemetry Collectors (via Operator CRDs) ----
       - name: Create OpenTelemetry Namespace
         run: |
           kubectl create namespace opentelemetry --dry-run=client -o yaml | kubectl apply -f -
           kubectl label namespace opentelemetry name=opentelemetry --overwrite
 
-      - name: Deploy OpenTelemetry Collector
+      - name: Deploy kubeletstats RBAC
         working-directory: kubernetes/opentelemetry
         run: |
-          helm upgrade --install otel-collector \
-            open-telemetry/opentelemetry-collector \
-            --namespace opentelemetry \
-            --values values-collector.yaml \
-            --wait \
-            --timeout 10m
+          echo "Creating RBAC for kubeletstats collector..."
+          kubectl apply -f kubeletstats-rbac.yaml
+
+      - name: Deploy OpenTelemetry Collectors
+        working-directory: kubernetes/opentelemetry
+        run: |
+          echo "Deploying OpenTelemetry Collector for application telemetry..."
+          kubectl apply -f collector-crd.yaml
+
+          echo "Deploying kubeletstats collector for infrastructure metrics..."
+          kubectl apply -f kubeletstats-crd.yaml
+
+          echo "Waiting for collectors to be ready..."
+          sleep 30  # Give the operator time to create the pods
+
+          kubectl get opentelemetrycollectors -n opentelemetry
+          kubectl get pods -n opentelemetry
 
       # ---- Deploy Microservices Demo ----
       - name: Create Microservices Namespace

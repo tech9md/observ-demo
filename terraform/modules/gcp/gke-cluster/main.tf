@@ -142,13 +142,13 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster    = google_container_cluster.primary.name
   project    = var.project_id
 
-  # Node count configuration - start with enough nodes for observability stack
-  initial_node_count = var.regional_cluster ? 1 : 3  # Start with 3 nodes for zonal to handle initial deployment
+  # Node count configuration - start with 1 node to minimize disk quota usage
+  initial_node_count = 1  # Single node to save quota (50GB disk)
 
-  # Autoscaling configuration - keep minimum of 2 to prevent scale-down issues during deployment
+  # Autoscaling configuration - allow scaling from 1-3 nodes as needed
   autoscaling {
-    min_node_count = 2  # Minimum 2 nodes to ensure capacity for observability stack
-    max_node_count = 5
+    min_node_count = 1  # Minimum 1 node (all workloads fit on e2-standard-4)
+    max_node_count = 3  # Allow scaling if needed
   }
 
   # Node management
