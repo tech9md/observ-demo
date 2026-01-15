@@ -1,6 +1,6 @@
-# Google Microservices Demo - GKE Autopilot Compatible
-# Minimal configuration that works with GKE Autopilot resource requirements
-# GKE Autopilot minimum: 250m CPU, 512Mi memory per container
+# Google Microservices Demo - GKE Standard Configuration
+# Minimal configuration that works with GKE Standard
+# Load generator disabled to save resources
 
 # Disable load generator to save resources
 loadGenerator:
@@ -14,10 +14,11 @@ opentelemetryCollector:
   create: false  # We deploy our own collector in opentelemetry namespace
 
 # Configure services to send traces to our OpenTelemetry Collector
+# Note: Operator-managed collector service name is <name>-collector
 default:
   env:
     - name: OTEL_EXPORTER_OTLP_ENDPOINT
-      value: "http://otel-collector-opentelemetry-collector.opentelemetry.svc.cluster.local:4317"
+      value: "http://otel-collector-collector.opentelemetry.svc.cluster.local:4317"
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: cumulative
     - name: OTEL_RESOURCE_ATTRIBUTES

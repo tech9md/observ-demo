@@ -142,13 +142,14 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster    = google_container_cluster.primary.name
   project    = var.project_id
 
-  # Node count configuration - start with 1 node to minimize disk quota usage
-  initial_node_count = 1  # Single node to save quota (50GB disk)
+  # Node count configuration - start with 2 nodes for initial deployment capacity
+  # During deployment, many pods schedule simultaneously - 2 nodes prevents bottleneck
+  initial_node_count = 2  # Two nodes (100GB disk total, fits 400GB quota)
 
-  # Autoscaling configuration - allow scaling from 1-3 nodes as needed
+  # Autoscaling configuration - scale down to 1 after initial deployment if needed
   autoscaling {
-    min_node_count = 1  # Minimum 1 node (all workloads fit on e2-standard-4)
-    max_node_count = 3  # Allow scaling if needed
+    min_node_count = 1  # Can scale down to 1 after deployment stabilizes
+    max_node_count = 4  # Allow scaling up for microservices demo
   }
 
   # Node management

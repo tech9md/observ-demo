@@ -134,6 +134,9 @@ spec:
         fsGroup: 472
         runAsUser: 472
         runAsNonRoot: true
+      # Tolerations to run on any node
+      tolerations:
+        - operator: "Exists"
       containers:
         - name: grafana
           image: grafana/grafana:10.2.3

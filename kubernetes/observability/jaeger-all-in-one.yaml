@@ -45,6 +45,9 @@ spec:
         prometheus.io/port: "14269"
     spec:
       serviceAccountName: jaeger
+      # Tolerations to run on any node
+      tolerations:
+        - operator: "Exists"
       containers:
       - name: jaeger
         image: jaegertracing/all-in-one:1.53

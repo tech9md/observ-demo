@@ -25,6 +25,10 @@ spec:
     prometheus.io/port: "8889"
     prometheus.io/path: "/metrics"
 
+  # Tolerations to run on any node
+  tolerations:
+    - operator: "Exists"
+
   config:
     receivers:
       otlp:

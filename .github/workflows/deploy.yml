@@ -261,7 +261,7 @@ jobs:
             --set installCRDs=true \
             --set global.leaderElection.namespace=cert-manager \
             --wait \
-            --timeout 5m
+            --timeout 10m
 
           echo "Waiting for cert-manager pods to be ready..."
           kubectl wait --for=condition=ready pod \
@@ -277,8 +277,17 @@ jobs:
           echo "Deploying OpenTelemetry Operator..."
           kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.116.0/opentelemetry-operator.yaml
 
-          echo "Waiting for OpenTelemetry Operator to be ready..."
+          echo "Waiting for OpenTelemetry Operator CRDs to be established..."
+          kubectl wait --for=condition=established crd/opentelemetrycollectors.opentelemetry.io --timeout=120s || true
+
+          echo "Waiting for OpenTelemetry Operator deployment to be available..."
           kubectl wait --for=condition=available deployment/opentelemetry-operator-controller-manager \
+            -n opentelemetry-operator-system \
+            --timeout=600s
+
+          echo "Waiting for all operator pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --all \
             -n opentelemetry-operator-system \
             --timeout=300s
 
@@ -362,9 +371,29 @@ jobs:
           echo "Deploying kubeletstats collector for infrastructure metrics..."
           kubectl apply -f kubeletstats-crd.yaml
 
-          echo "Waiting for collectors to be ready..."
-          sleep 30  # Give the operator time to create the pods
+          echo "Waiting for OpenTelemetry Collectors to be created by operator..."
+          # Wait for the operator to process the CRDs and create pods
+          for i in {1..30}; do
+            COLLECTOR_PODS=$(kubectl get pods -n opentelemetry --no-headers 2>/dev/null | wc -l || echo "0")
+            echo "Attempt $i/30: $COLLECTOR_PODS collector pod(s) found"
+            if [ "$COLLECTOR_PODS" -ge 2 ]; then
+              echo "Collector pods created, waiting for readiness..."
+              break
+            fi
+            sleep 10
+          done
 
+          echo "Waiting for collector pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            --all \
+            -n opentelemetry \
+            --timeout=300s || {
+              echo "Some collector pods not ready, checking status..."
+              kubectl get pods -n opentelemetry
+              kubectl describe pods -n opentelemetry || true
+            }
+
+          echo "OpenTelemetry Collectors status:"
           kubectl get opentelemetrycollectors -n opentelemetry
           kubectl get pods -n opentelemetry
 
@@ -379,29 +408,33 @@ jobs:
           # Clone the microservices-demo repo to get the Helm chart
           git clone --depth 1 https://github.com/GoogleCloudPlatform/microservices-demo.git /tmp/microservices-demo
 
-          # Install without --wait to avoid API rate limiting on GKE Autopilot
-          # Use simplified values that disable loadgenerator and let Autopilot set resources
+          # Install with longer timeout for pod scheduling
           helm upgrade --install microservices-demo \
             /tmp/microservices-demo/helm-chart \
             --namespace microservices-demo \
             --values kubernetes/microservices-demo/values-gcp.yaml \
-            --timeout 5m
+            --timeout 15m
 
       - name: Wait for Microservices Demo Pods
         run: |
           echo "Waiting for microservices-demo pods to be ready..."
-          # Wait up to 10 minutes for pods to be ready, checking every 30 seconds
-          for i in {1..20}; do
+          # Wait up to 15 minutes for pods to be ready, checking every 30 seconds
+          for i in {1..30}; do
             READY=$(kubectl get pods -n microservices-demo --no-headers 2>/dev/null | grep -c "Running" || echo "0")
             TOTAL=$(kubectl get pods -n microservices-demo --no-headers 2>/dev/null | wc -l || echo "0")
-            echo "Attempt $i/20: $READY/$TOTAL pods running"
+            PENDING=$(kubectl get pods -n microservices-demo --no-headers 2>/dev/null | grep -c "Pending" || echo "0")
+            echo "Attempt $i/30: $READY/$TOTAL pods running, $PENDING pending"
             if [ "$READY" -ge 10 ] && [ "$READY" -eq "$TOTAL" ]; then
               echo "All pods are running!"
               break
             fi
-            if [ $i -eq 20 ]; then
-              echo "Warning: Not all pods are ready after 10 minutes, but continuing..."
+            if [ $i -eq 30 ]; then
+              echo "Warning: Not all pods are ready after 15 minutes"
+              echo "Pod status:"
               kubectl get pods -n microservices-demo
+              echo ""
+              echo "Describing pending/failed pods:"
+              kubectl describe pods -n microservices-demo --field-selector=status.phase!=Running || true
             fi
             sleep 30
           done
