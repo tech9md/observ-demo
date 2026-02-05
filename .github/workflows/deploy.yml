@@ -540,13 +540,30 @@ jobs:
           kubectl scale deployment -n cert-manager --replicas=0 --all || true
 
           echo ""
-          echo "All deployments scaled to zero. Run 'start' action to resume."
-          echo "Note: GKE will scale down nodes automatically when pods are removed."
+          echo "All deployments scaled to zero."
 
-      - name: Show Status
+      - name: Resize Node Pool to Zero
         run: |
-          echo "Current pod status (should be empty or terminating):"
-          kubectl get pods -A | grep -E "observability|opentelemetry|microservices|cert-manager" || echo "No pods running"
+          GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          NODE_POOL_NAME="${GKE_CLUSTER_NAME}-node-pool"
+
+          echo "Resizing node pool to 0 nodes to stop VM charges..."
+          gcloud container clusters resize $GKE_CLUSTER_NAME \
+            --node-pool $NODE_POOL_NAME \
+            --num-nodes 0 \
+            --zone ${{ github.event.inputs.zone }} \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --quiet
+
+          echo ""
+          echo "============================================"
+          echo "CLUSTER STOPPED"
+          echo "============================================"
+          echo "- All deployments scaled to zero"
+          echo "- Node pool resized to 0 (no VM charges)"
+          echo "- Cluster control plane still running (free for zonal)"
+          echo ""
+          echo "Run 'start' action to resume."
 
   # ============================================
   # START: Scale deployments back up
@@ -586,6 +603,31 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Resize Node Pool
+        run: |
+          GKE_CLUSTER_NAME="${{ secrets.GCP_PROJECT_ID }}-gke"
+          NODE_POOL_NAME="${GKE_CLUSTER_NAME}-node-pool"
+
+          echo "Resizing node pool to 2 nodes..."
+          gcloud container clusters resize $GKE_CLUSTER_NAME \
+            --node-pool $NODE_POOL_NAME \
+            --num-nodes 2 \
+            --zone ${{ github.event.inputs.zone }} \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --quiet
+
+          echo "Waiting for nodes to be ready..."
+          for i in {1..30}; do
+            READY_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || echo "0")
+            echo "Attempt $i/30: $READY_NODES nodes ready"
+            if [ "$READY_NODES" -ge 2 ]; then
+              echo "Nodes are ready!"
+              break
+            fi
+            sleep 20
+          done
+          kubectl get nodes
 
       - name: Scale Up All Deployments
         run: |
